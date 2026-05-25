@@ -7,8 +7,7 @@ const { buildVcPanel } = require('./panel');
 module.exports = async function vcVoiceStateHandler(oldState, newState) {
   // User joined a channel (or moved to a different one)
   if (newState.channelId && newState.channelId !== oldState.channelId) {
-    const joinChannelId = vcManager.getJoinChannel(newState.guild.id);
-    if (joinChannelId && newState.channelId === joinChannelId) {
+    if (vcManager.isJoinChannel(newState.guild.id, newState.channelId)) {
       await handleJoinToCreate(newState);
     }
   }
@@ -21,24 +20,29 @@ module.exports = async function vcVoiceStateHandler(oldState, newState) {
   }
 };
 
-// ─── Create new room ──────────────────────────────────────────────────────────
+// ─── สร้างห้องใหม่ ────────────────────────────────────────────────────────────
 
 async function handleJoinToCreate(state) {
   const member = state.member;
   const guild = state.guild;
   const joinChannel = guild.channels.cache.get(state.channelId);
 
+  // ─── ตั้งชื่อห้องจากชื่อ join channel: ตัด "สร้างห้อง" แล้วต่อ "ของ {username}" ───
+  // ตัวอย่าง: "สร้างห้องเล่นเกมดีหว่าา" → "เล่นเกมดีหว่าา ของ Pd.Gee"
+  const rawName = (joinChannel?.name ?? '').trim();
+  const baseName = rawName.replace(/^สร้างห้อง\s*/u, '').trim();
+  const roomName = baseName
+    ? `${baseName} ของ ${member.displayName}`
+    : `ห้องของ ${member.displayName}`;
+
   try {
     // Create voice channel in the same category as the "join to create" channel
     const newChannel = await guild.channels.create({
-      name: `🔊-⋆⑅˚₊ห้องแหกปากของ ${member.displayName}`,
+      name: roomName,
       type: ChannelType.GuildVoice,
       parent: joinChannel?.parentId ?? null,
       permissionOverwrites: [
-        // ไม่ copy overwrites จาก join channel เพื่อป้องกัน role อื่นที่มี Connect:Allow
-        // ทำให้ตอน lock (@everyone: Connect:DENY) ทำงานได้จริง
-        // ห้องนี้ inherit permission จาก category เหมือนปกติ
-        // เฉพาะ owner ที่ได้รับ Allow ชัดเจน (ล็อก/ซ่อนก็ยังเข้าได้)
+        // เฉพาะ owner: Allow Connect + ViewChannel (ล็อก/ซ่อนก็ยังเข้าได้)
         {
           id: member.id,
           allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.ViewChannel],
@@ -48,10 +52,10 @@ async function handleJoinToCreate(state) {
 
     vcManager.registerRoom(newChannel.id, member.id, guild.id);
 
-    // Move user into the new channel
+    // ย้าย user เข้าห้องใหม่
     await member.voice.setChannel(newChannel);
 
-    // Send control panel to the voice channel's built-in text chat
+    // ส่ง control panel ไปที่ text chat ในห้อง voice
     const panelMsg = await newChannel.send({
       content: `<@${member.id}> ห้องของคุณพร้อมแล้ว! ใช้ปุ่มด้านล่างจัดการห้องได้เลย 🎙️`,
       ...buildVcPanel(newChannel, member.id),
@@ -64,7 +68,7 @@ async function handleJoinToCreate(state) {
   }
 }
 
-// ─── Delete empty room ────────────────────────────────────────────────────────
+// ─── ลบห้องว่าง ───────────────────────────────────────────────────────────────
 
 async function handleLeave(state) {
   try {

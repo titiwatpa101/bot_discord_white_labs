@@ -4,17 +4,25 @@ const path = require('path');
 const DATA_DIR = path.join(__dirname, '../../../data');
 const CONFIG_FILE = path.join(DATA_DIR, 'vc_config.json');
 
-// ─── In-memory: active rooms (reset on restart — orphaned channels are cleaned on voiceStateUpdate) ──
-// Map<channelId, { ownerId, guildId }>
+// ─── In-memory: active rooms (reset on restart — orphaned channels cleaned on voiceStateUpdate) ──
+// Map<channelId, { ownerId, guildId, panelMessageId }>
 const activeRooms = new Map();
 
-// ─── Persistent config: guildId → { joinChannelId } ──────────────────────────
+// ─── Persistent config: guildId → { joinChannelIds: string[] } ───────────────
 let guildConfigs = {};
 
 function loadConfig() {
   try {
     if (!fs.existsSync(CONFIG_FILE)) return;
-    guildConfigs = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+    const raw = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+    for (const [guildId, cfg] of Object.entries(raw)) {
+      // Migrate old format: { joinChannelId: "xxx" } → { joinChannelIds: ["xxx"] }
+      if (cfg.joinChannelId && !cfg.joinChannelIds) {
+        guildConfigs[guildId] = { joinChannelIds: [cfg.joinChannelId] };
+      } else {
+        guildConfigs[guildId] = cfg;
+      }
+    }
     console.log('[VC] Config loaded');
   } catch (err) {
     console.error('[VC] Failed to load config:', err.message);
@@ -30,24 +38,53 @@ function saveConfig() {
   }
 }
 
+// ─── Env var bootstrap — Railway persistence across redeploys ─────────────────
+// ตั้งค่า VC_JOIN_CHANNEL_IDS=id1,id2,id3 ใน Railway เพื่อให้ config คงอยู่
+function getEnvIds() {
+  const raw = process.env.VC_JOIN_CHANNEL_IDS || process.env.VC_JOIN_CHANNEL_ID || '';
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
 loadConfig();
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
-  // Config
-  getJoinChannel(guildId) {
-    // Fallback to env var ถ้าไม่มี config file (เช่น Railway)
-    return guildConfigs[guildId]?.joinChannelId
-      ?? process.env.VC_JOIN_CHANNEL_ID
-      ?? null;
+  // ── ตรวจว่า channel นี้เป็นห้อง "สร้างห้อง" หรือเปล่า ──
+  isJoinChannel(guildId, channelId) {
+    const stored = guildConfigs[guildId]?.joinChannelIds ?? [];
+    return stored.includes(channelId) || getEnvIds().includes(channelId);
   },
-  setJoinChannel(guildId, channelId) {
-    guildConfigs[guildId] = { ...(guildConfigs[guildId] ?? {}), joinChannelId: channelId };
+
+  // ── ดึง channel IDs ทั้งหมด (file + env var) ──
+  getJoinChannels(guildId) {
+    const stored = guildConfigs[guildId]?.joinChannelIds ?? [];
+    return [...new Set([...stored, ...getEnvIds()])];
+  },
+
+  // ── เพิ่มห้อง "สร้างห้อง" ──
+  addJoinChannel(guildId, channelId) {
+    const current = guildConfigs[guildId]?.joinChannelIds ?? [];
+    if (!current.includes(channelId)) {
+      guildConfigs[guildId] = {
+        ...(guildConfigs[guildId] ?? {}),
+        joinChannelIds: [...current, channelId],
+      };
+      saveConfig();
+    }
+  },
+
+  // ── ลบห้อง "สร้างห้อง" ──
+  removeJoinChannel(guildId, channelId) {
+    const current = guildConfigs[guildId]?.joinChannelIds ?? [];
+    guildConfigs[guildId] = {
+      ...(guildConfigs[guildId] ?? {}),
+      joinChannelIds: current.filter((id) => id !== channelId),
+    };
     saveConfig();
   },
 
-  // Room registry
+  // ── Room registry ──
   registerRoom(channelId, ownerId, guildId) {
     activeRooms.set(channelId, { ownerId, guildId, panelMessageId: null });
   },

@@ -30,19 +30,72 @@ async function requireOwner(interaction) {
 async function handleCommand(interaction) {
   const sub = interaction.options.getSubcommand();
 
-  // /vc setup — admin only
+  // /vc setup — admin only: เพิ่มห้อง "สร้างห้อง"
   if (sub === 'setup') {
     if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)) {
       return interaction.reply({ content: '❌ ต้องมีสิทธิ์ **Manage Channels** ถึงจะใช้คำสั่งนี้ได้', ephemeral: true });
     }
     const channel = interaction.options.getChannel('channel');
-    vcManager.setJoinChannel(interaction.guildId, channel.id);
+    vcManager.addJoinChannel(interaction.guildId, channel.id);
+
+    const allIds = vcManager.getJoinChannels(interaction.guildId);
+    const channelList = allIds.map((id) => `<#${id}>`).join('\n') || '-';
+    const envValue   = allIds.join(',');
+
     return interaction.reply({
       embeds: [{
         title: '✅ ตั้งค่าสำเร็จ',
-        description: `${channel} คือห้อง "สร้างห้อง" แล้ว\n\nวิธีใช้: ใครเข้าห้องนั้น → บอทสร้างห้อง voice ใหม่ให้อัตโนมัติ ออกหมดแล้วก็ลบทิ้ง`,
+        description: `เพิ่ม ${channel} เป็นห้อง "สร้างห้อง" แล้ว\n\nวิธีใช้: ใครเข้าห้องนั้น → บอทสร้างห้องให้อัตโนมัติ ออกหมดแล้วก็ลบทิ้ง`,
         color: 0x57f287,
-        fields: [{ name: '📌 Channel ID', value: channel.id, inline: true }],
+        fields: [
+          { name: '📋 ห้องสร้างทั้งหมด', value: channelList, inline: false },
+          {
+            name: '🚀 คง config ข้าม Railway redeploy',
+            value: `ตั้ง env var นี้ใน Railway service bot เพื่อไม่ให้หายเวลา redeploy:\n\`\`\`\nVC_JOIN_CHANNEL_IDS=${envValue}\n\`\`\``,
+            inline: false,
+          },
+        ],
+      }],
+      ephemeral: true,
+    });
+  }
+
+  // /vc remove — admin only: ลบห้อง "สร้างห้อง"
+  if (sub === 'remove') {
+    if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)) {
+      return interaction.reply({ content: '❌ ต้องมีสิทธิ์ **Manage Channels** ถึงจะใช้คำสั่งนี้ได้', ephemeral: true });
+    }
+    const channel = interaction.options.getChannel('channel');
+    vcManager.removeJoinChannel(interaction.guildId, channel.id);
+
+    const remaining = vcManager.getJoinChannels(interaction.guildId);
+    const channelList = remaining.map((id) => `<#${id}>`).join('\n') || '*(ไม่มีห้องที่ตั้งค่าไว้)*';
+
+    return interaction.reply({
+      embeds: [{
+        title: '🗑️ ลบห้องสำเร็จ',
+        description: `ลบ ${channel} ออกจากระบบแล้ว`,
+        color: 0xe74c3c,
+        fields: [{ name: '📋 ห้องที่เหลือ', value: channelList, inline: false }],
+      }],
+      ephemeral: true,
+    });
+  }
+
+  // /vc list — admin only: ดูห้องทั้งหมด
+  if (sub === 'list') {
+    if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)) {
+      return interaction.reply({ content: '❌ ต้องมีสิทธิ์ **Manage Channels** ถึงจะใช้คำสั่งนี้ได้', ephemeral: true });
+    }
+    const allIds = vcManager.getJoinChannels(interaction.guildId);
+    const channelList = allIds.map((id) => `<#${id}>`).join('\n') || '*(ยังไม่ได้ตั้งค่าห้องใดเลย)*';
+
+    return interaction.reply({
+      embeds: [{
+        title: '📋 ห้อง "สร้างห้อง" ทั้งหมด',
+        description: channelList,
+        color: 0x5865f2,
+        footer: { text: `ทั้งหมด ${allIds.length} ห้อง · ใช้ /vc setup เพิ่ม, /vc remove ลบ` },
       }],
       ephemeral: true,
     });
