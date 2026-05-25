@@ -14,6 +14,8 @@ const roomsRouter = require('./routes/rooms');
 const { initSocket } = require('./socket/gameSocket');
 
 const app    = express();
+// ต้องตั้งก่อน middleware ทุกตัว — Railway ใช้ reverse proxy
+if (isProd) app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io     = new Server(server, {
   cors: isProd ? false : {
@@ -35,7 +37,7 @@ const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: isProd, sameSite: isProd ? 'none' : 'lax' },
+  cookie: { secure: isProd, sameSite: 'lax' },  // lax = same-origin ทำงานได้
 });
 
 app.use(sessionMiddleware);
