@@ -1,5 +1,6 @@
-const rp = require('../systems/rp/handler');
-const vc = require('../systems/vc/handler');
+const rp  = require('../systems/rp/handler');
+const vc  = require('../systems/vc/handler');
+const uno = require('../systems/uno/command');
 
 // ─── Main Interaction Router ──────────────────────────────────────────────────
 // เพิ่มระบบใหม่: import handler ด้านบน แล้วเพิ่ม prefix check ด้านล่าง
@@ -7,8 +8,9 @@ const vc = require('../systems/vc/handler');
 module.exports = async function interactionHandler(interaction) {
   try {
     if (interaction.isChatInputCommand()) {
-      if (interaction.commandName === 'rp') return rp.handleRp(interaction);
-      if (interaction.commandName === 'vc') return vc.handleCommand(interaction);
+      if (interaction.commandName === 'rp')  return rp.handleRp(interaction);
+      if (interaction.commandName === 'vc')  return vc.handleCommand(interaction);
+      if (interaction.commandName === 'uno') return uno.execute(interaction);
     } else if (interaction.isButton()) {
       if (interaction.customId.startsWith('rp_')) return rp.handleButton(interaction);
       if (interaction.customId.startsWith('vc_')) return vc.handleButton(interaction);
