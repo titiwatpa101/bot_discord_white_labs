@@ -1,0 +1,63 @@
+.cp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(4px);
+  animation: fadeIn .15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.cp-modal {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 28px 24px;
+  width: min(320px, 90vw);
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  text-align: center;
+  animation: popIn .2s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn {
+  from { transform: scale(.8); opacity: 0; }
+  to   { transform: scale(1);  opacity: 1; }
+}
+
+.cp-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: 20px;
+  color: rgba(255,255,255,.8);
+}
+
+.cp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cp-btn {
+  border: none;
+  border-radius: 14px;
+  padding: 18px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  transition: transform .1s, box-shadow .1s;
+  box-shadow: 0 4px 12px rgba(0,0,0,.3);
+}
+.cp-btn:active { transform: scale(.93); }
+
+.cp-btn-red    { background: var(--red);    color: #fff; }
+.cp-btn-green  { background: var(--green);  color: #fff; }
+.cp-btn-blue   { background: var(--blue);   color: #fff; }
+.cp-btn-yellow { background: var(--yellow); color: #222; }
+
+.cp-emoji { font-size: 1.8rem; }
+.cp-name  { font-size: .85rem; }

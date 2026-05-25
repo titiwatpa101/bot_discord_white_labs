@@ -1,0 +1,31 @@
+.hand-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 4px;
+}
+
+.hand-scroll {
+  display: flex;
+  flex-direction: row;
+  gap: -8px;           /* cards slightly overlap */
+  padding: 20px 16px 8px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  max-width: 100vw;
+}
+.hand-scroll::-webkit-scrollbar { display: none; }
+
+/* Slightly overlap cards for UNO fan look */
+.hand-scroll .card + .card { margin-left: -16px; }
+.hand-scroll .card:hover,
+.hand-scroll .card.card-selected { z-index: 10; margin-left: 0; }
+
+.hand-count {
+  font-size: .75rem;
+  color: rgba(255,255,255,.4);
+  font-weight: 700;
+}

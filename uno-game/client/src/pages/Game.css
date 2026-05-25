@@ -1,0 +1,154 @@
+.game-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100dvh;
+  gap: 16px;
+  color: rgba(255,255,255,.5);
+  font-weight: 700;
+}
+
+/* ── Waiting room ── */
+.game-waiting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 20px;
+}
+.gw-card {
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 36px 28px;
+  width: min(420px, 100%);
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.4);
+}
+.gw-logo {
+  font-size: 3rem;
+  font-weight: 900;
+  color: var(--red);
+  text-shadow: 3px 3px 0 #000;
+  letter-spacing: 4px;
+  margin-bottom: 6px;
+}
+.gw-room { color: rgba(255,255,255,.6); margin-bottom: 24px; }
+.gw-players {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.gw-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,.06);
+  border-radius: 12px;
+}
+.gw-player-empty { opacity: .35; }
+.gw-avatar { width: 36px; height: 36px; border-radius: 50%; }
+.gw-avatar-empty {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.1);
+  border: 2px dashed rgba(255,255,255,.2);
+}
+.gw-host-badge {
+  margin-left: auto;
+  background: var(--yellow);
+  color: #222;
+  font-size: .7rem;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.gw-empty-label { font-size: .85rem; color: rgba(255,255,255,.4); font-weight: 700; }
+.gw-hint { font-size: .82rem; color: rgba(255,255,255,.4); margin-bottom: 20px; }
+.gw-start-btn { width: 100%; font-size: 1.1rem; padding: 14px; border-radius: 14px; }
+.gw-wait { color: rgba(255,255,255,.45); font-size: .9rem; font-weight: 700; }
+
+/* ── Game over ── */
+.game-over {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  background: radial-gradient(ellipse, #1a1a3e, var(--bg) 70%);
+}
+.go-card {
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 48px 32px;
+  text-align: center;
+  width: min(360px, 90vw);
+}
+.go-emoji { font-size: 4rem; margin-bottom: 12px; }
+.go-title { font-size: 1.8rem; font-weight: 900; margin-bottom: 28px; }
+.go-actions { display: flex; flex-direction: column; gap: 12px; }
+
+/* ── Main board ── */
+.game-board {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+  position: relative;
+  background: radial-gradient(ellipse at center, #1a2a1a 0%, var(--bg) 80%);
+}
+
+.game-opponents {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.game-opponents::-webkit-scrollbar { display: none; }
+
+.game-turn-bar {
+  text-align: center;
+  padding: 8px 16px;
+  font-size: .85rem;
+  font-weight: 800;
+  color: rgba(255,255,255,.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.game-turn-bar.my-turn {
+  color: var(--yellow);
+  text-shadow: 0 0 12px rgba(241,196,15,.4);
+}
+.turn-penalty { color: var(--red); }
+.turn-dir { opacity: .5; }
+
+.game-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uno-shout-btn {
+  position: fixed;
+  bottom: 160px;
+  right: 16px;
+  padding: 10px 18px;
+  font-size: .9rem;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(231,76,60,.5);
+  animation: pulse 1s ease-in-out infinite;
+  z-index: 50;
+}
+
+.game-hand-area {
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+  background: rgba(0,0,0,.3);
+  backdrop-filter: blur(8px);
+}

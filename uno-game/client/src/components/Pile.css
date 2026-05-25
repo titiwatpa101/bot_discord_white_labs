@@ -1,0 +1,57 @@
+.pile-area {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.pile-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.pile-draw { position: relative; cursor: default; }
+.pile-draw-active { cursor: pointer; }
+.pile-draw-active:hover .card {
+  transform: scale(1.06);
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+}
+
+.pile-pending {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: var(--red);
+  color: #fff;
+  font-size: .8rem;
+  font-weight: 900;
+  border-radius: 50%;
+  width: 26px; height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg);
+  z-index: 5;
+}
+
+.pile-chosen {
+  position: absolute;
+  bottom: 22px;
+  right: -6px;
+  font-size: 1.1rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.6));
+}
+.pile-chosen-red    { color: var(--red); }
+.pile-chosen-green  { color: var(--green); }
+.pile-chosen-blue   { color: var(--blue); }
+.pile-chosen-yellow { color: var(--yellow); }
+
+.pile-label {
+  font-size: .72rem;
+  color: rgba(255,255,255,.45);
+  font-weight: 700;
+  white-space: nowrap;
+}

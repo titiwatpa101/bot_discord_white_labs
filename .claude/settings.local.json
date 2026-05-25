@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"require\\('./src/sessionManager'\\); require\\('./src/aiService'\\); require\\('./src/commands/rp'\\); console.log\\('All modules load OK'\\)\")"
+    ]
+  }
+}

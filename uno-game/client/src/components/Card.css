@@ -1,0 +1,132 @@
+/* ── Base card ── */
+.card {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: 10px;
+  border: 3px solid rgba(255,255,255,.85);
+  box-shadow: 0 4px 12px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.3);
+  flex-shrink: 0;
+  user-select: none;
+  transition: transform .15s, box-shadow .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Colors ── */
+.card-red    { background: linear-gradient(145deg, #e74c3c, #c0392b); }
+.card-green  { background: linear-gradient(145deg, #27ae60, #1e8449); }
+.card-blue   { background: linear-gradient(145deg, #2980b9, #1f618d); }
+.card-yellow { background: linear-gradient(145deg, #f1c40f, #d4ac0d); }
+.card-wild   { background: linear-gradient(145deg, #2c3e50, #1a252f); }
+
+/* Wild card — multi-color quadrant */
+.card-wild::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 7px;
+  background: conic-gradient(
+    var(--red)    0deg  90deg,
+    var(--blue)   90deg 180deg,
+    var(--yellow) 180deg 270deg,
+    var(--green)  270deg 360deg
+  );
+  opacity: .35;
+}
+
+/* ── Oval center ── */
+.card-oval {
+  width: 58%;
+  height: 70%;
+  border-radius: 50%;
+  background: rgba(255,255,255,.18);
+  border: 2px solid rgba(255,255,255,.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-25deg);
+  position: relative;
+  z-index: 1;
+}
+.card-oval-wild {
+  background: rgba(255,255,255,.12);
+}
+
+.card-center-label {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 1px 2px 4px rgba(0,0,0,.5);
+  transform: rotate(25deg);
+  line-height: 1;
+}
+
+/* ── Corner labels ── */
+.card-corner {
+  position: absolute;
+  font-size: .7rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 1px 1px 2px rgba(0,0,0,.6);
+  line-height: 1;
+}
+.card-corner.tl { top: 5px;  left: 6px; }
+.card-corner.br { bottom: 5px; right: 6px; transform: rotate(180deg); }
+
+/* ── Card back ── */
+.card-back {
+  background: linear-gradient(145deg, #e74c3c, #c0392b);
+  border-color: #fff;
+  overflow: hidden;
+}
+.card-back::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 6px;
+  border: 3px solid rgba(255,255,255,.6);
+}
+.card-back-text {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 3px rgba(0,0,0,.5);
+  z-index: 1;
+  font-style: italic;
+}
+
+/* ── States ── */
+.card-empty {
+  background: rgba(255,255,255,.05);
+  border: 2px dashed rgba(255,255,255,.15);
+  pointer-events: none;
+}
+
+.card-playable { cursor: pointer; }
+.card-playable:hover {
+  transform: translateY(-14px) scale(1.05);
+  box-shadow: 0 12px 28px rgba(0,0,0,.5);
+}
+.card-selected {
+  transform: translateY(-18px) scale(1.07);
+  box-shadow: 0 0 0 3px #fff, 0 12px 28px rgba(0,0,0,.6);
+}
+.card-disabled {
+  opacity: .45;
+  cursor: default;
+  filter: grayscale(.4);
+}
+
+/* ── Small variant (opponent display) ── */
+.card-sm {
+  width: 42px;
+  height: 62px;
+  border-radius: 6px;
+  border-width: 2px;
+}
+.card-sm .card-center-label { font-size: 1rem; }
+.card-sm .card-corner        { font-size: .5rem; }
+.card-sm .card-back-text     { font-size: .65rem; }
