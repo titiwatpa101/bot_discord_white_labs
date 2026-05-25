@@ -37,7 +37,10 @@ loadConfig();
 module.exports = {
   // Config
   getJoinChannel(guildId) {
-    return guildConfigs[guildId]?.joinChannelId ?? null;
+    // Fallback to env var ถ้าไม่มี config file (เช่น Railway)
+    return guildConfigs[guildId]?.joinChannelId
+      ?? process.env.VC_JOIN_CHANNEL_ID
+      ?? null;
   },
   setJoinChannel(guildId, channelId) {
     guildConfigs[guildId] = { ...(guildConfigs[guildId] ?? {}), joinChannelId: channelId };
