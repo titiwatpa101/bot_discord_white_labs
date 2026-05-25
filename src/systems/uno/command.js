@@ -9,19 +9,11 @@ module.exports = {
     await interaction.deferReply();
 
     const serverUrl = process.env.UNO_SERVER_URL || 'http://localhost:3001';
-    const apiKey    = process.env.BOT_API_KEY;
-
-    if (!apiKey) {
-      return interaction.editReply('❌ ยังไม่ได้ตั้ง `BOT_API_KEY` ใน .env');
-    }
 
     try {
       const res = await fetch(`${serverUrl}/api/rooms/create`, {
         method:  'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-bot-key':    apiKey,
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!res.ok) {
@@ -37,11 +29,11 @@ module.exports = {
           description: `กดลิงก์ด้านล่าง → Login ด้วย Discord → รอเพื่อนเข้าแล้วกด **เริ่มเกม**`,
           color:       0xe74c3c,
           fields: [
-            { name: '🔗 ลิงก์เข้าห้อง',  value: url,    inline: false },
-            { name: '🆔 Room ID',         value: `\`${roomId}\``, inline: true },
-            { name: '👥 ผู้เล่น',         value: '2–4 คน', inline: true },
+            { name: '🔗 ลิงก์เข้าห้อง', value: url,             inline: false },
+            { name: '🆔 Room ID',        value: `\`${roomId}\``, inline: true  },
+            { name: '👥 ผู้เล่น',        value: '2–4 คน',        inline: true  },
           ],
-          footer: { text: `สร้างโดย ${interaction.user.username} · ห้องหายถ้า server ปิด` },
+          footer:    { text: `สร้างโดย ${interaction.user.username} · ห้องหายถ้า server ปิด` },
           timestamp: new Date().toISOString(),
         }],
       });
