@@ -9,8 +9,10 @@
     "deploy": "node deploy-commands.js"
   },
   "dependencies": {
+    "@discordjs/voice": "^0.18.0",
     "@google/generative-ai": "^0.21.0",
     "discord.js": "^14.16.3",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "libsodium-wrappers": "^0.8.4"
   }
 }
