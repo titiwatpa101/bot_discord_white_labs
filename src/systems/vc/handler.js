@@ -4,7 +4,9 @@ const {
   TextInputBuilder,
   TextInputStyle,
   StringSelectMenuBuilder,
+  UserSelectMenuBuilder,
   PermissionFlagsBits,
+  OverwriteType,
 } = require('discord.js');
 
 const vcManager = require('./vcManager');
@@ -183,6 +185,42 @@ async function handleButton(interaction) {
     });
   }
 
+  // ── Allow → ephemeral UserSelectMenu ──
+  if (customId === 'vc_allow') {
+    const room = await requireOwner(interaction);
+    if (!room) return;
+
+    const select = new UserSelectMenuBuilder()
+      .setCustomId('vc_allow_select')
+      .setPlaceholder('เลือกคนที่ต้องการอนุญาตให้เข้าห้องได้')
+      .setMinValues(1)
+      .setMaxValues(1);
+
+    return interaction.reply({
+      content: '✅ เลือกคนที่ต้องการ **อนุญาต** ให้เข้าห้องได้ (กดซ้ำเพื่อยกเลิก):',
+      components: [new ActionRowBuilder().addComponents(select)],
+      ephemeral: true,
+    });
+  }
+
+  // ── Block → ephemeral UserSelectMenu ──
+  if (customId === 'vc_block') {
+    const room = await requireOwner(interaction);
+    if (!room) return;
+
+    const select = new UserSelectMenuBuilder()
+      .setCustomId('vc_block_select')
+      .setPlaceholder('เลือกคนที่ต้องการบล็อก')
+      .setMinValues(1)
+      .setMaxValues(1);
+
+    return interaction.reply({
+      content: '🚫 เลือกคนที่ต้องการ **บล็อก** ออกจากห้อง (กดซ้ำเพื่อยกเลิก):',
+      components: [new ActionRowBuilder().addComponents(select)],
+      ephemeral: true,
+    });
+  }
+
   // ── Toggle Lock / Toggle Hide → deferUpdate + editReply ──
   const room = await requireOwner(interaction);
   if (!room) return;
@@ -304,4 +342,68 @@ async function handleModal(interaction) {
   }
 }
 
-module.exports = { handleCommand, handleButton, handleSelect, handleModal };
+// ─── User Select Menu handler (Allow / Block) ─────────────────────────────────
+
+async function handleUserSelect(interaction) {
+  const { customId, channelId } = interaction;
+  if (customId !== 'vc_allow_select' && customId !== 'vc_block_select') return;
+
+  const room = vcManager.getRoom(channelId);
+  if (!room || room.ownerId !== interaction.user.id) {
+    return interaction.update({ content: '❌ เฉพาะเจ้าของห้องเท่านั้น', components: [] });
+  }
+
+  const targetId = interaction.values[0];
+  if (targetId === interaction.user.id) {
+    return interaction.update({ content: '❌ ไม่สามารถจัดการสิทธิ์ตัวเองได้', components: [] });
+  }
+
+  const channel = interaction.channel;
+
+  try {
+    const existing = channel.permissionOverwrites.cache.get(targetId);
+
+    if (customId === 'vc_allow_select') {
+      const alreadyAllowed = existing?.allow.has(PermissionFlagsBits.Connect) ?? false;
+      if (alreadyAllowed) {
+        // ยกเลิก allow
+        await channel.permissionOverwrites.delete(targetId);
+        await interaction.update({ content: `✅ ยกเลิกการอนุญาต <@${targetId}> แล้ว`, components: [] });
+      } else {
+        // อนุญาต — เข้าได้แม้ห้องล็อก
+        await channel.permissionOverwrites.edit(targetId, {
+          Connect: true,
+          ViewChannel: true,
+        });
+        await interaction.update({ content: `✅ อนุญาต <@${targetId}> ให้เข้าห้องได้แล้ว`, components: [] });
+      }
+    } else {
+      const alreadyBlocked = existing?.deny.has(PermissionFlagsBits.Connect) ?? false;
+      if (alreadyBlocked) {
+        // ยกเลิก block
+        await channel.permissionOverwrites.delete(targetId);
+        await interaction.update({ content: `✅ ยกเลิกการบล็อก <@${targetId}> แล้ว`, components: [] });
+      } else {
+        // บล็อก — ไม่เห็น ไม่เข้า
+        await channel.permissionOverwrites.edit(targetId, {
+          Connect: false,
+          ViewChannel: false,
+        });
+        // kick ออกถ้ากำลังอยู่ในห้อง
+        try {
+          const member = await interaction.guild.members.fetch(targetId);
+          if (member.voice.channelId === channelId) await member.voice.disconnect();
+        } catch (_) {}
+        await interaction.update({ content: `🚫 บล็อก <@${targetId}> ออกจากห้องแล้ว`, components: [] });
+      }
+    }
+
+    // อัปเดต panel
+    await refreshPanel(interaction);
+  } catch (err) {
+    console.error('[VC] handleUserSelect failed:', err.message);
+    await interaction.update({ content: '❌ ดำเนินการไม่สำเร็จ ลองใหม่อีกครั้ง', components: [] });
+  }
+}
+
+module.exports = { handleCommand, handleButton, handleSelect, handleUserSelect, handleModal };

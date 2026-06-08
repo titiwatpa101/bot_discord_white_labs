@@ -3,6 +3,7 @@ const {
   ButtonBuilder,
   ButtonStyle,
   PermissionFlagsBits,
+  OverwriteType,
 } = require('discord.js');
 
 // ─── Permission helpers ───────────────────────────────────────────────────────
@@ -17,15 +18,35 @@ function isHidden(channel) {
   return overwrite?.deny.has(PermissionFlagsBits.ViewChannel) ?? false;
 }
 
+function getMemberOverwrites(channel) {
+  return channel.permissionOverwrites.cache.filter(
+    (o) => o.type === OverwriteType.Member,
+  );
+}
+
+function getAllowedUsers(channel) {
+  return getMemberOverwrites(channel)
+    .filter((o) => o.allow.has(PermissionFlagsBits.Connect))
+    .map((o) => `<@${o.id}>`);
+}
+
+function getBlockedUsers(channel) {
+  return getMemberOverwrites(channel)
+    .filter((o) => o.deny.has(PermissionFlagsBits.Connect))
+    .map((o) => `<@${o.id}>`);
+}
+
 // ─── Panel Builder ────────────────────────────────────────────────────────────
 
 function buildVcPanel(channel, ownerId) {
-  const locked = isLocked(channel);
-  const hidden = isHidden(channel);
+  const locked  = isLocked(channel);
+  const hidden  = isHidden(channel);
+  const allowed = getAllowedUsers(channel);
+  const blocked = getBlockedUsers(channel);
 
   const embed = {
     title: '🎙️ VC Control Panel',
-    description: `เจ้าของห้อง: <@${ownerId}>`,   // mention render ได้ใน description
+    description: `เจ้าของห้อง: <@${ownerId}>`,
     color: locked ? 0xed4245 : hidden ? 0x99aab5 : 0x5865f2,
     fields: [
       {
@@ -43,12 +64,22 @@ function buildVcPanel(channel, ownerId) {
         value: channel.userLimit > 0 ? `**${channel.userLimit}** คน` : 'ไม่จำกัด',
         inline: true,
       },
+      {
+        name: '✅ อนุญาตพิเศษ',
+        value: allowed.length ? allowed.join('\n') : '*(ไม่มี)*',
+        inline: true,
+      },
+      {
+        name: '🚫 บล็อก',
+        value: blocked.length ? blocked.join('\n') : '*(ไม่มี)*',
+        inline: true,
+      },
     ],
     footer: { text: 'เฉพาะเจ้าของห้องเท่านั้นที่ใช้ปุ่มได้' },
     timestamp: new Date().toISOString(),
   };
 
-  const row = new ActionRowBuilder().addComponents(
+  const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('vc_toggle_lock')
       .setLabel(locked ? 'Unlock' : 'Lock')
@@ -76,7 +107,20 @@ function buildVcPanel(channel, ownerId) {
       .setStyle(ButtonStyle.Danger),
   );
 
-  return { embeds: [embed], components: [row] };
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('vc_allow')
+      .setLabel('Allow')
+      .setEmoji('✅')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId('vc_block')
+      .setLabel('Block')
+      .setEmoji('🚫')
+      .setStyle(ButtonStyle.Danger),
+  );
+
+  return { embeds: [embed], components: [row1, row2] };
 }
 
 module.exports = { buildVcPanel, isLocked, isHidden };

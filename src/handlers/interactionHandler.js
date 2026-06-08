@@ -17,6 +17,8 @@ module.exports = async function interactionHandler(interaction) {
     } else if (interaction.isStringSelectMenu()) {
       if (interaction.customId.startsWith('rp_')) return rp.handleSelect(interaction);
       if (interaction.customId.startsWith('vc_')) return vc.handleSelect(interaction);
+    } else if (interaction.isUserSelectMenu()) {
+      if (interaction.customId.startsWith('vc_')) return vc.handleUserSelect(interaction);
     } else if (interaction.isModalSubmit()) {
       if (interaction.customId.startsWith('rp_')) return rp.handleModal(interaction);
       if (interaction.customId.startsWith('vc_')) return vc.handleModal(interaction);
