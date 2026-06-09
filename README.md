@@ -1,6 +1,6 @@
 # Snakebell Bot
 
-Discord bot สำหรับเซิร์ฟเวอร์ RP — มีระบบโรลเพลย์ AI, ห้อง Voice อัตโนมัติ, เกม UNO, และคำสั่งอื่นๆ
+Discord bot สำหรับเซิร์ฟเวอร์ RP — มีระบบโรลเพลย์ AI, ห้อง Voice อัตโนมัติ, เกม UNO, ระบบ Verify และคำสั่งอื่นๆ
 
 ## ฟีเจอร์
 
@@ -42,8 +42,24 @@ Discord bot สำหรับเซิร์ฟเวอร์ RP — มีร
 - ✏️ เปลี่ยนชื่อห้อง
 - 🔢 จำกัดจำนวนคน
 - 👢 Kick ผู้เล่น
+- ✅ Allow — อนุญาต user เข้าได้แม้ห้องล็อก/ซ่อน (กดซ้ำเพื่อยกเลิก)
+- 🚫 Block — บล็อก user ไม่ให้เห็นและเข้าห้อง + kick ออกทันที (กดซ้ำเพื่อยกเลิก)
 
 **ชื่อห้องที่สร้าง:** ถ้าช่อง "สร้างห้อง" ชื่อ `สร้างห้อง เล่นเกม` → ห้องที่สร้างจะชื่อ `เล่นเกม ของ Username`
+
+---
+
+### ✅ Verify (ระบบยืนยันสมาชิก)
+ระบบ self-verify พร้อมตรวจสอบอายุบัญชี Discord
+
+| คำสั่ง | รายละเอียด |
+|---|---|
+| `/verify setup role: button: min_days:` | ตั้งค่าและส่งข้อความยืนยันไปยังช่องนี้ |
+| `/verify send` | ส่งข้อความยืนยันใหม่ (ใช้ config เดิม) |
+
+- ข้อความและปุ่ม custom ได้ทั้งหมด
+- ตรวจสอบอายุบัญชี Discord ขั้นต่ำ (default 30 วัน)
+- ให้ Role อัตโนมัติเมื่อยืนยันสำเร็จ
 
 ---
 
@@ -68,8 +84,9 @@ Discord bot สำหรับเซิร์ฟเวอร์ RP — มีร
 
 | คำสั่ง | รายละเอียด |
 |---|---|
-| `!clearchat` | ลบทุกข้อความในช่อง (ต้องมีสิทธิ์ Manage Messages) |
+| `!clearchat` | ลบทุกข้อความในช่อง (วนลบทีละ 100) |
 | `!clearchat <n>` | ลบ n ข้อความล่าสุด (1–100) |
+| `!clearchat stop` | หยุดการลบกลางทาง |
 
 > ข้อความที่อายุเกิน 14 วัน Discord ไม่อนุญาตให้ bulk delete
 
@@ -91,7 +108,7 @@ Discord bot สำหรับเซิร์ฟเวอร์ RP — มีร
 
 ```bash
 git clone <repo-url>
-cd snakebell-bot
+cd bot_discord_white_labs
 npm install
 cp .env.example .env   # แก้ไขค่า env ตามด้านล่าง
 npm run deploy         # ลงทะเบียน slash commands กับ Discord
@@ -111,7 +128,10 @@ GEMINI_API_KEY=       # Google Gemini API Key สำหรับระบบ RP
 
 UNO_SERVER_URL=       # URL ของ uno-game server เช่น https://xxx.up.railway.app
 
-VC_JOIN_CHANNEL_IDS=  # Channel IDs คั่นด้วย , เช่น 123,456 (คงค่าข้าม Railway redeploy)
+VC_JOIN_CHANNEL_IDS=  # Channel IDs คั่นด้วย , เช่น 123,456 (คงค่าข้าม redeploy)
+
+NEWBIE_ROLE_ID=       # Role ID สำหรับระบบเด็กใหม่
+NEWBIE_DURATION_MS=86400000  # ระยะเวลาถือ role เด็กใหม่ (ms) default 24h
 ```
 
 ---
@@ -135,7 +155,8 @@ src/
 │   └── messageHandler.js       # จัดการ prefix commands (!afk, !clearchat)
 ├── systems/
 │   ├── rp/                     # ระบบ Roleplay AI
-│   ├── vc/                     # ระบบ Auto Voice Channel
+│   ├── vc/                     # ระบบ Auto Voice Channel + Allow/Block
+│   ├── verify/                 # ระบบยืนยันสมาชิก
 │   ├── uno/                    # คำสั่ง /uno
 │   ├── afk/                    # คำสั่ง !afk
 │   ├── clearchat/              # คำสั่ง !clearchat
@@ -149,6 +170,32 @@ deploy-commands.js              # ลงทะเบียน slash commands
 
 ---
 
+## Deploy บน Windows VPS
+
+```cmd
+git clone https://github.com/titiwatpa101/bot_discord_white_labs.git
+cd bot_discord_white_labs
+npm install
+notepad .env        # ใส่ค่า env ทั้งหมด
+npm install -g pm2
+pm2 start index.js --name snakebell-bot
+pm2 save
+pm2-startup install
+```
+
+### Auto-deploy เมื่อ push GitHub
+ใช้ GitHub Actions + SSH — ไฟล์ `.github/workflows/deploy.yml` ตั้งค่าไว้แล้ว
+
+ตั้ง Secrets ใน GitHub repo → Settings → Secrets and variables → Actions:
+
+| Secret | ค่า |
+|---|---|
+| `VPS_HOST` | IP ของ VPS |
+| `VPS_USER` | `Administrator` |
+| `VPS_SSH_KEY` | Private key (`-----BEGIN OPENSSH PRIVATE KEY-----` ทั้งก้อน) |
+
+---
+
 ## Deploy บน Railway
 
 1. Push code ขึ้น GitHub
@@ -156,5 +203,4 @@ deploy-commands.js              # ลงทะเบียน slash commands
 3. ตั้ง environment variables ตามด้านบน
 4. รัน `npm run deploy` ในเครื่องตัวเองครั้งเดียวเพื่อลงทะเบียน slash commands
 
-> **หมายเหตุ:** Railway ใช้ ephemeral filesystem — ไฟล์ที่สร้างระหว่างรันจะหายเมื่อ redeploy  
 > ใช้ `VC_JOIN_CHANNEL_IDS` env var เพื่อคงค่า VC config ข้าม redeploy
