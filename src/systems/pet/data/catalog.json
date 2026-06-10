@@ -1,0 +1,57 @@
+{
+  "dragon_fire": {
+    "name": "มังกรไฟ",
+    "type": "dragon",
+    "emoji": "🐉",
+    "rarity": "legendary",
+    "spawnWeight": 1,
+    "basePrice": 5000,
+    "elasticity": 0.3,
+    "baseVolatility": 0.015,
+    "expReward": 30
+  },
+  "wolf_shadow": {
+    "name": "หมาป่าเงา",
+    "type": "wolf",
+    "emoji": "🐺",
+    "rarity": "epic",
+    "spawnWeight": 4,
+    "basePrice": 2000,
+    "elasticity": 0.4,
+    "baseVolatility": 0.025,
+    "expReward": 20
+  },
+  "butterfly_ice": {
+    "name": "ผีเสื้อน้ำแข็ง",
+    "type": "butterfly",
+    "emoji": "🦋",
+    "rarity": "rare",
+    "spawnWeight": 10,
+    "basePrice": 800,
+    "elasticity": 0.6,
+    "baseVolatility": 0.04,
+    "expReward": 15
+  },
+  "fox_spirit": {
+    "name": "จิ้งจอกวิญญาณ",
+    "type": "fox",
+    "emoji": "🦊",
+    "rarity": "uncommon",
+    "spawnWeight": 25,
+    "basePrice": 300,
+    "elasticity": 0.7,
+    "baseVolatility": 0.05,
+    "expReward": 10
+  },
+  "cat_orange": {
+    "name": "แมวส้ม",
+    "type": "cat",
+    "emoji": "🐱",
+    "rarity": "common",
+    "spawnWeight": 60,
+    "basePrice": 100,
+    "elasticity": 0.8,
+    "baseVolatility": 0.06,
+    "expReward": 5
+  }
+}
