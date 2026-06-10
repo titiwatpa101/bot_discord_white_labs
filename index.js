@@ -4,6 +4,7 @@ const interactionHandler = require('./src/handlers/interactionHandler');
 const messageHandler = require('./src/handlers/messageHandler');
 const vcVoiceHandler = require('./src/systems/vc/voiceStateHandler');
 const { onGuildMemberAdd, initNewbieSystem } = require('./src/systems/newbie/guildMemberHandler');
+const spawnManager = require('./src/systems/pet/managers/spawnManager');
 
 // ─── Validate required env vars ───────────────────────────────────────────────
 const REQUIRED_ENV = ['DISCORD_TOKEN', 'CLIENT_ID'];
@@ -28,8 +29,9 @@ const client = new Client({
 client.once('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   console.log(`📡 Serving ${client.guilds.cache.size} guild(s)`);
-  console.log(`🤖 Systems: RP ✓  VC ✓  Newbie ✓`);
+  console.log(`🤖 Systems: RP ✓  VC ✓  Newbie ✓  Pet ✓`);
   await initNewbieSystem(client);
+  spawnManager.initAllSpawns(client);
 });
 
 client.on('interactionCreate', interactionHandler);

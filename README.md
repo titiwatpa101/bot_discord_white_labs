@@ -4,6 +4,82 @@ Discord bot สำหรับเซิร์ฟเวอร์ RP — มีร
 
 ## ฟีเจอร์
 
+### 🐾 Pet System (ระบบสัตว์เลี้ยง)
+ระบบเลี้ยงสัตว์ครบวงจร — จับ, เทรน, ซื้อขาย, Wonder Trade พร้อม Dynamic Economy
+
+**User Commands (`!` prefix):**
+
+| คำสั่ง | หน้าที่ |
+|---|---|
+| `!pet` | เปิด Panel หลัก (auto-delete 5 นาที) |
+| `!market` | เปิด Panel ตรงหน้าตลาด |
+| `!trade` | เปิด Panel ตรงหน้า Wonder Trade |
+
+**Panel Navigation (ทุกอย่างอยู่ใน panel):**
+- 📦 **คลังสัตว์** — ดูสัตว์ทั้งหมด, เลือกดู detail
+- ⭐ **Set Active** — เซ็ตสัตว์ที่ต้องการอยู่ slot #1 (รับ EXP)
+- 🍖 **ให้อาหาร** — เลือกอาหารจาก inventory → Active pet รับ EXP
+- 💰 **ลงขาย** — เลือกราคาและลง listing ในตลาด
+- 🔀 **Wonder Trade** — ส่งสัตว์เข้าพูล แลกสุ่มกับคนอื่น
+- 🏪 **ร้านค้า** — ซื้ออาหาร (หญ้า/เนื้อ/พิเศษ)
+- 📊 **ตลาด** — ดู listing, ซื้อสัตว์จากผู้เล่นคนอื่น
+
+**Admin Commands (`/pet`):**
+
+| คำสั่ง | หน้าที่ |
+|---|---|
+| `/pet spawn setup <channel> [interval]` | ตั้งช่อง spawn + ความถี่ (นาที, default 30) |
+| `/pet spawn remove <channel>` | ลบช่อง spawn |
+| `/pet spawn trigger` | บังคับ spawn ทันที (ทดสอบ) |
+| `/pet market setup <channel>` | ส่ง public market panel |
+| `/pet wondertrade setup <channel>` | ส่ง public Wonder Trade panel |
+| `/pet give <user> <species>` | ให้สัตว์แก่ผู้ใช้ (debug) |
+| `/pet coins <user> <amount>` | ให้ coins แก่ผู้ใช้ (debug) |
+
+**ระบบ EXP & Level:**
+- EXP ไปที่สัตว์ใน slot #1 (Active) เสมอ
+- แหล่ง EXP: ให้อาหาร, จับจาก spawn (+15), รับจาก Wonder Trade (+30)
+- `expToNext = 100 × level^1.5`
+
+**Spawn System:**
+- Bot สุ่ม spawn สัตว์ตามช่วงเวลาที่ตั้งไว้
+- กดปุ่ม **จับเลย!** ภายใน 5 นาที — คนแรกได้สัตว์
+- ความหายาก: ⭐LEGENDARY(1%) 💜EPIC(4%) 🔷RARE(10%) 🟢UNCOMMON(25%) ⚪COMMON(60%)
+
+**Wonder Trade:**
+- ส่งสัตว์เข้า pool → ได้รับสัตว์สุ่มจากคนอื่น
+- Public panel อัปเดต realtime เมื่อ pool เปลี่ยน
+- ถ้ามีคนรอ match อยู่ → แลกทันที
+
+**Dynamic Economy:**
+- ราคาปรับจาก 6 ปัจจัย: Supply, Demand (EMA), Momentum, Liquidity, Mean Reversion, Noise
+- Anti-manipulation: Diminishing returns + Wash trade detection
+- Random market events ทุก 6-12 ชั่วโมง
+- Market state: 📈 BULL / 📉 BEAR / ➡️ STABLE / 〰️ VOLATILE
+- Public market panel อัปเดต realtime เมื่อมีการซื้อขาย
+
+**อาหาร:**
+| อาหาร | ราคา | EXP |
+|---|---|---|
+| 🌿 หญ้าธรรมดา | 10 coins | +10 |
+| 🍖 เนื้อสด | 50 coins | +50 |
+| ✨ อาหารพิเศษ | 200 coins | +200 |
+
+**สัตว์เริ่มต้นใน Catalog:**
+| Species | Rarity | ราคาฐาน |
+|---|---|---|
+| 🐉 มังกรไฟ | ⭐ LEGENDARY | 5,000c |
+| 🐺 หมาป่าเงา | 💜 EPIC | 2,000c |
+| 🦋 ผีเสื้อน้ำแข็ง | 🔷 RARE | 800c |
+| 🦊 จิ้งจอกวิญญาณ | 🟢 UNCOMMON | 300c |
+| 🐱 แมวส้ม | ⚪ COMMON | 100c |
+
+> เพิ่ม/แก้สัตว์ได้ที่ `src/systems/pet/data/catalog.json`
+
+---
+
+
+
 ### 🎭 RP (Roleplay AI)
 ระบบโรลเพลย์แบบ turn-based ผ่าน Google Gemini AI
 
@@ -157,6 +233,15 @@ src/
 │   ├── rp/                     # ระบบ Roleplay AI
 │   ├── vc/                     # ระบบ Auto Voice Channel + Allow/Block
 │   ├── verify/                 # ระบบยืนยันสมาชิก
+│   ├── pet/                    # ระบบสัตว์เลี้ยง + Dynamic Economy
+│   │   ├── data/               # catalog.json, users.json, market.json, wondertrade.json
+│   │   ├── managers/           # petManager, marketManager, wonderTradeManager, spawnManager
+│   │   ├── panels/             # panel builders (main, pets, detail, shop, market, trade, feed, sell)
+│   │   ├── public/             # realtime public panel updaters
+│   │   ├── handler.js          # button + select interaction router
+│   │   ├── adminHandler.js     # /pet slash command handler
+│   │   ├── messageCommand.js   # !pet !market !trade
+│   │   └── command.js          # slash command definition
 │   ├── uno/                    # คำสั่ง /uno
 │   ├── afk/                    # คำสั่ง !afk
 │   ├── clearchat/              # คำสั่ง !clearchat
