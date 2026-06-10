@@ -64,30 +64,34 @@ async function triggerSpawn(client, guildId) {
   const config = getConfig(guildId);
   if (!config.channels.length) return;
 
-  const speciesId = pickSpecies();
-  const species   = catalog[speciesId];
-
   const { getCurrentPrice }  = require('./marketManager');
   const { buildSpawnEmbed, buildSpawnExpiredEmbed } = require('../public/spawnPublic');
 
-  const channelId = config.channels[Math.floor(Math.random() * config.channels.length)];
-  const channel   = client.channels.cache.get(channelId);
-  if (!channel) return;
+  // Spawn ในทุก channel พร้อมกัน — แต่ละห้องได้สัตว์คนละตัวสุ่มอิสระ
+  await Promise.all(config.channels.map(async (channelId) => {
+    const channel = client.channels.cache.get(channelId);
+    if (!channel) return;
 
-  const marketPrice = getCurrentPrice(guildId, speciesId);
-  const { embed, row } = buildSpawnEmbed(guildId, channelId, speciesId, species, marketPrice);
+    // ข้ามถ้าห้องนี้ยัง spawn อยู่
+    const spawnKey = `${guildId}_${channelId}`;
+    if (activeSpawns.has(spawnKey)) return;
 
-  let msg;
-  try { msg = await channel.send({ embeds: [embed], components: [row] }); }
-  catch { return; }
+    const speciesId   = pickSpecies();
+    const species     = catalog[speciesId];
+    const marketPrice = getCurrentPrice(guildId, speciesId);
+    const { embed, row } = buildSpawnEmbed(guildId, channelId, speciesId, species, marketPrice);
 
-  const spawnKey = `${guildId}_${channelId}`;
-  activeSpawns.set(spawnKey, { messageId: msg.id, speciesId, guildId, channelId, expiresAt: Date.now() + 300_000 });
+    let msg;
+    try { msg = await channel.send({ embeds: [embed], components: [row] }); }
+    catch { return; }
 
-  setTimeout(async () => {
-    activeSpawns.delete(spawnKey);
-    try { await msg.edit({ embeds: [buildSpawnExpiredEmbed(species)], components: [] }); } catch {}
-  }, 300_000);
+    activeSpawns.set(spawnKey, { messageId: msg.id, speciesId, guildId, channelId, expiresAt: Date.now() + 300_000 });
+
+    setTimeout(async () => {
+      activeSpawns.delete(spawnKey);
+      try { await msg.edit({ embeds: [buildSpawnExpiredEmbed(species)], components: [] }); } catch {}
+    }, 300_000);
+  }));
 }
 
 function getActiveSpawn(guildId, channelId) {
