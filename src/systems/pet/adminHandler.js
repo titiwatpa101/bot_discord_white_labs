@@ -1,7 +1,11 @@
+const fs   = require('fs');
+const path = require('path');
 const petManager    = require('./managers/petManager');
 const marketManager = require('./managers/marketManager');
 const wtManager     = require('./managers/wonderTradeManager');
 const spawnManager  = require('./managers/spawnManager');
+
+const CATALOG_PATH = path.join(__dirname, 'data/catalog.json');
 
 const { buildMarketEmbed, updateMarketPanel }          = require('./public/marketPublic');
 const { buildWonderTradeEmbed, updateWonderTradePanel } = require('./public/wonderTradePublic');
@@ -35,6 +39,25 @@ async function handleCommand(interaction) {
       spawnManager.triggerSpawn(interaction.client, guildId).catch(console.error);
       return;
     }
+  }
+
+  // ── /pet catalog image ───────────────────────────────────────────────────
+  if (group === 'catalog' && sub === 'image') {
+    const speciesId = interaction.options.getString('species');
+    const url       = interaction.options.getString('url');
+    const catalog   = JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
+    if (!catalog[speciesId]) {
+      return interaction.reply({ content: `❌ ไม่พบ species: \`${speciesId}\``, ephemeral: true });
+    }
+    catalog[speciesId].imageUrl = url === '-' ? null : url;
+    fs.writeFileSync(CATALOG_PATH, JSON.stringify(catalog, null, 2));
+    const sp = catalog[speciesId];
+    return interaction.reply({
+      content: url === '-'
+        ? `✅ ลบรูป ${sp.emoji} **${sp.name}** แล้ว`
+        : `✅ ตั้งรูป ${sp.emoji} **${sp.name}** แล้ว`,
+      ephemeral: true,
+    });
   }
 
   // ── /pet market setup ────────────────────────────────────────────────────

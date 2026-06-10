@@ -24,15 +24,22 @@ function build(userId, user, instanceId) {
   const needed  = expToNext(pet.level);
   const hasFood = Object.values(user.food).some(n => n > 0);
 
+  const { RARITY_BASE } = require('../managers/coinDropManager');
+  const rBase      = RARITY_BASE[sp?.rarity] || 1;
+  const dropPerSlot = Math.floor(rBase * Math.sqrt(pet.level) * (isActive ? 1.5 : 1.0));
+
   const embed = new EmbedBuilder()
     .setTitle(`${sp?.emoji || '🐾'} ${sp?.name || pet.speciesId}`)
     .setColor(RARITY_COLOR[sp?.rarity] || 0x5865f2)
     .addFields(
       { name: 'Rarity', value: RARITY_LABEL[sp?.rarity] || '-', inline: true },
-      { name: 'Level', value: `${pet.level}`, inline: true },
-      { name: 'Slot', value: isActive ? '#1 ✅ Active' : `#${user.pets.findIndex(p => p.instanceId === instanceId) + 1}`, inline: true },
+      { name: 'Level',  value: `${pet.level}`, inline: true },
+      { name: 'Slot',   value: isActive ? '#1 ✅ Active' : `#${user.pets.findIndex(p => p.instanceId === instanceId) + 1}`, inline: true },
       { name: `EXP  \`${bar}\``, value: `${pet.exp} / ${needed}` },
+      { name: '🪙 Passive Income', value: `+${dropPerSlot} coins / 5 นาที${isActive ? '  *(Active ×1.5)*' : ''}`, inline: true },
     );
+
+  if (sp?.imageUrl) embed.setThumbnail(sp.imageUrl);
 
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()

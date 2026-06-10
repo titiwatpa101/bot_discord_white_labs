@@ -2,6 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 const { RARITY_LABEL } = require('./constants');
 const catalog           = require('../data/catalog.json');
 const { expBar, expToNext, totalFood } = require('../managers/petManager');
+const { dropRateLabel } = require('../managers/coinDropManager');
 
 function build(userId, user) {
   const active  = user.pets[0];
@@ -21,12 +22,15 @@ function build(userId, user) {
     .setTitle('🐾 แผงควบคุมสัตว์เลี้ยง')
     .setColor(0x5865f2)
     .addFields(
-      { name: '💰 Wallet', value: `${(user.coins || 0).toLocaleString()} coins`, inline: true },
-      { name: '🐾 สัตว์', value: `${user.pets.length} ตัว`, inline: true },
-      { name: '🍖 อาหาร', value: `${totalFood(user)} ชิ้น`, inline: true },
+      { name: '💰 Wallet',    value: `${(user.coins || 0).toLocaleString()} coins`, inline: true },
+      { name: '🐾 สัตว์',    value: `${user.pets.length} ตัว`, inline: true },
+      { name: '🍖 อาหาร',   value: `${totalFood(user)} ชิ้น`, inline: true },
+      { name: '🪙 รายได้ passive', value: dropRateLabel(user), inline: false },
       { name: 'Active Pet', value: activeField },
     )
     .setTimestamp();
+
+  if (active && sp?.imageUrl) embed.setThumbnail(sp.imageUrl);
 
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`pet_nav_${uid}_pets`).setLabel('📦 คลังสัตว์').setStyle(ButtonStyle.Secondary),

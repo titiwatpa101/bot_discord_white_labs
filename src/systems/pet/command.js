@@ -43,6 +43,21 @@ module.exports = {
         )
     )
 
+    // /pet catalog image
+    .addSubcommandGroup(g =>
+      g.setName('catalog').setDescription('จัดการ catalog สัตว์')
+        .addSubcommand(s =>
+          s.setName('image')
+            .setDescription('[Admin] ตั้ง image URL ให้สัตว์')
+            .addStringOption(o =>
+              o.setName('species').setDescription('Species ID เช่น dragon_fire').setRequired(true)
+            )
+            .addStringOption(o =>
+              o.setName('url').setDescription('URL รูปภาพ (ใส่ - เพื่อลบรูป)').setRequired(true)
+            )
+        )
+    )
+
     // /pet give (debug/admin)
     .addSubcommand(s =>
       s.setName('give')

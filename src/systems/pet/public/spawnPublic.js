@@ -14,6 +14,8 @@ function buildSpawnEmbed(guildId, channelId, speciesId, species, marketPrice) {
     .setColor(RARITY_COLOR[species.rarity] || 0x5865f2)
     .setTimestamp();
 
+  if (species.imageUrl) embed.setImage(species.imageUrl);
+
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`pet_spawn_${guildId}_${channelId}`)
