@@ -11,26 +11,26 @@ const petAdmin   = require('../systems/pet/adminHandler');
 module.exports = async function interactionHandler(interaction) {
   try {
     if (interaction.isChatInputCommand()) {
-      if (interaction.commandName === 'rp')     return rp.handleRp(interaction);
-      if (interaction.commandName === 'vc')     return vc.handleCommand(interaction);
-      if (interaction.commandName === 'uno')    return uno.execute(interaction);
-      if (interaction.commandName === 'verify') return verify.handleCommand(interaction);
-      if (interaction.commandName === 'pet')    return petAdmin.handleCommand(interaction);
+      if (interaction.commandName === 'rp')     return await rp.handleRp(interaction);
+      if (interaction.commandName === 'vc')     return await vc.handleCommand(interaction);
+      if (interaction.commandName === 'uno')    return await uno.execute(interaction);
+      if (interaction.commandName === 'verify') return await verify.handleCommand(interaction);
+      if (interaction.commandName === 'pet')    return await petAdmin.handleCommand(interaction);
     } else if (interaction.isButton()) {
-      if (interaction.customId.startsWith('rp_'))     return rp.handleButton(interaction);
-      if (interaction.customId.startsWith('vc_'))     return vc.handleButton(interaction);
-      if (interaction.customId.startsWith('verify_')) return verify.handleButton(interaction);
-      if (interaction.customId.startsWith('pet_'))    return petHandler.handleButton(interaction);
+      if (interaction.customId.startsWith('rp_'))     return await rp.handleButton(interaction);
+      if (interaction.customId.startsWith('vc_'))     return await vc.handleButton(interaction);
+      if (interaction.customId.startsWith('verify_')) return await verify.handleButton(interaction);
+      if (interaction.customId.startsWith('pet_'))    return await petHandler.handleButton(interaction);
     } else if (interaction.isStringSelectMenu()) {
-      if (interaction.customId.startsWith('rp_')) return rp.handleSelect(interaction);
-      if (interaction.customId.startsWith('vc_'))     return vc.handleSelect(interaction);
-      if (interaction.customId.startsWith('petsel_')) return petHandler.handleSelect(interaction);
+      if (interaction.customId.startsWith('rp_'))     return await rp.handleSelect(interaction);
+      if (interaction.customId.startsWith('vc_'))     return await vc.handleSelect(interaction);
+      if (interaction.customId.startsWith('petsel_')) return await petHandler.handleSelect(interaction);
     } else if (interaction.isUserSelectMenu()) {
-      if (interaction.customId.startsWith('vc_')) return vc.handleUserSelect(interaction);
+      if (interaction.customId.startsWith('vc_')) return await vc.handleUserSelect(interaction);
     } else if (interaction.isModalSubmit()) {
-      if (interaction.customId.startsWith('rp_'))     return rp.handleModal(interaction);
-      if (interaction.customId.startsWith('vc_'))     return vc.handleModal(interaction);
-      if (interaction.customId.startsWith('verify_')) return verify.handleModal(interaction);
+      if (interaction.customId.startsWith('rp_'))     return await rp.handleModal(interaction);
+      if (interaction.customId.startsWith('vc_'))     return await vc.handleModal(interaction);
+      if (interaction.customId.startsWith('verify_')) return await verify.handleModal(interaction);
     }
   } catch (err) {
     console.error('Interaction error:', err);
