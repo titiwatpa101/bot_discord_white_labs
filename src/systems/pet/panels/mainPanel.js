@@ -41,6 +41,7 @@ function build(userId, user) {
   const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`pet_nav_${uid}_market`).setLabel('📊 ตลาด').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`pet_nav_${uid}_trade`).setLabel('🔀 Wonder Trade').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`pet_nav_${uid}_enhance`).setLabel('⚔️ ตีบวก').setStyle(ButtonStyle.Danger).setDisabled(!active),
   );
 
   return { embeds: [embed], components: [row1, row2] };

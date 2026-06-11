@@ -17,8 +17,10 @@ function build(userId, guildId, user, instanceId) {
     };
   }
 
-  const marketPrice = marketManager.getCurrentPrice(guildId, pet.speciesId);
+  const enh         = pet.enhanceLevel || 0;
+  const marketPrice = marketManager.getCurrentPrice(guildId, pet.speciesId, enh);
   const state       = marketManager.getMarketState(guildId, pet.speciesId);
+  const enhLabel    = enh > 0 ? ` **+${enh}**` : '';
 
   // Offer 5 price tiers around market price
   const tiers = [0.6, 0.8, 1.0, 1.2, 1.5].map(mult => Math.round(marketPrice * mult));
@@ -30,9 +32,9 @@ function build(userId, guildId, user, instanceId) {
   }));
 
   const embed = new EmbedBuilder()
-    .setTitle(`💰 ลงขาย ${sp.emoji} ${sp.name}`)
+    .setTitle(`💰 ลงขาย ${sp.emoji} ${sp.name}${enhLabel}`)
     .setDescription(
-      `${RARITY_LABEL[sp.rarity]}  •  Lv.**${pet.level}**\n\n` +
+      `${RARITY_LABEL[sp.rarity]}  •  Lv.**${pet.level}**${enhLabel}\n\n` +
       `ราคาตลาดปัจจุบัน: **${marketPrice.toLocaleString()} coins**  ${state.label}\n\n` +
       `เลือกราคาที่ต้องการตั้ง:`
     )

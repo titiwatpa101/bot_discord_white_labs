@@ -172,10 +172,12 @@ function recordTrade(guildId, speciesId, type, userId) {
   return { oldPrice, newPrice };
 }
 
-function getCurrentPrice(guildId, speciesId) {
-  const g  = getGuild(guildId);
+function getCurrentPrice(guildId, speciesId, enhanceLevel = 0) {
+  const g    = getGuild(guildId);
   initPrice(g, speciesId);
-  return g.prices[speciesId].value;
+  const base = g.prices[speciesId].value;
+  const mult = require('./enhanceManager').getEnhancePriceMult(enhanceLevel);
+  return Math.round(base * mult);
 }
 
 function getMarketState(guildId, speciesId) {
@@ -217,11 +219,11 @@ function getActiveEvent(guildId) {
 
 // ─── Listings ─────────────────────────────────────────────────────────────────
 
-function addListing(guildId, userId, username, instanceId, speciesId, price) {
+function addListing(guildId, userId, username, instanceId, speciesId, price, enhanceLevel = 0) {
   const g = getGuild(guildId);
   g.listings.push({
     listingId: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-    userId, username, instanceId, speciesId, price, listedAt: Date.now(),
+    userId, username, instanceId, speciesId, price, enhanceLevel, listedAt: Date.now(),
   });
   saveGuild(guildId, g);
 }

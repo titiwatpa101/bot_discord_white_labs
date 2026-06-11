@@ -3,6 +3,12 @@ const path = require('path');
 
 const DATA_PATH = path.join(__dirname, '../data/users.json');
 
+const ITEM_CATALOG = {
+  card_protect: { name: '🛡️ บัตรป้องกัน',      price: 2000 },
+  card_boost_s: { name: '⬆️ บัตรเพิ่มเรท S',    price: 500  },
+  card_boost_m: { name: '⬆️ บัตรเพิ่มเรท M',    price: 1500 },
+};
+
 const FOOD_CATALOG = {
   food_herb:    { name: 'ใบยาสมุนไพร 🌿', price: 5,   exp: 5   },
   food_basic:   { name: 'หญ้าธรรมดา 🌾',  price: 10,  exp: 10  },
@@ -28,14 +34,29 @@ function getUser(guildId, userId) {
   const data = load();
   const k    = key(guildId, userId);
   if (!data[k]) {
-    data[k] = { coins: 0, food: Object.fromEntries(Object.keys(FOOD_CATALOG).map(id => [id, 0])), pets: [] };
+    data[k] = {
+      coins: 0,
+      food:  Object.fromEntries(Object.keys(FOOD_CATALOG).map(id => [id, 0])),
+      items: Object.fromEntries(Object.keys(ITEM_CATALOG).map(id => [id, 0])),
+      pets:  [],
+    };
     save(data);
     return data[k];
   }
-  // Backfill new food types for existing users
   let dirty = false;
+  // Backfill new food types
   for (const foodId of Object.keys(FOOD_CATALOG)) {
     if (data[k].food[foodId] === undefined) { data[k].food[foodId] = 0; dirty = true; }
+  }
+  // Backfill items
+  if (!data[k].items) { data[k].items = Object.fromEntries(Object.keys(ITEM_CATALOG).map(id => [id, 0])); dirty = true; }
+  for (const itemId of Object.keys(ITEM_CATALOG)) {
+    if (data[k].items[itemId] === undefined) { data[k].items[itemId] = 0; dirty = true; }
+  }
+  // Backfill enhanceLevel + pityStack on existing pets
+  for (const pet of data[k].pets) {
+    if (pet.enhanceLevel === undefined) { pet.enhanceLevel = 0; dirty = true; }
+    if (!pet.pityStack)                 { pet.pityStack    = {}; dirty = true; }
   }
   if (dirty) save(data);
   return data[k];
@@ -53,7 +74,7 @@ function genId() {
 
 function addPet(guildId, userId, speciesId) {
   const user = getUser(guildId, userId);
-  const pet  = { instanceId: genId(), speciesId, level: 1, exp: 0 };
+  const pet  = { instanceId: genId(), speciesId, level: 1, exp: 0, enhanceLevel: 0, pityStack: {} };
   user.pets.push(pet);
   saveUser(guildId, userId, user);
   return pet;
@@ -130,8 +151,24 @@ function totalFood(user) {
   return Object.values(user.food).reduce((s, n) => s + n, 0);
 }
 
+function addItem(guildId, userId, itemId, qty = 1) {
+  const user = getUser(guildId, userId);
+  if (!user.items) user.items = {};
+  user.items[itemId] = (user.items[itemId] || 0) + qty;
+  saveUser(guildId, userId, user);
+}
+
+function useItem(guildId, userId, itemId, qty = 1) {
+  const user = getUser(guildId, userId);
+  if (!user.items?.[itemId] || user.items[itemId] < qty) return false;
+  user.items[itemId] -= qty;
+  saveUser(guildId, userId, user);
+  return true;
+}
+
 module.exports = {
   getUser, saveUser, addPet, removePet, setActive,
   addExp, expToNext, expBar, addCoins, addFood, useFood, totalFood,
-  FOOD_CATALOG,
+  addItem, useItem,
+  FOOD_CATALOG, ITEM_CATALOG,
 };

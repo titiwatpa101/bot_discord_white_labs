@@ -2,6 +2,7 @@ const petManager      = require('./managers/petManager');
 const marketManager   = require('./managers/marketManager');
 const wtManager       = require('./managers/wonderTradeManager');
 const spawnManager    = require('./managers/spawnManager');
+const enhanceManager  = require('./managers/enhanceManager');
 const catalog         = require('./data/catalog.json');
 
 const mainPanel        = require('./panels/mainPanel');
@@ -14,6 +15,9 @@ const wonderTradePanel = require('./panels/wonderTradePanel');
 const feedPanel        = require('./panels/feedPanel');
 const feedQtyPanel     = require('./panels/feedQtyPanel');
 const sellPanel        = require('./panels/sellPanel');
+const enhancePanel     = require('./panels/enhancePanel');
+const enhanceMatPanel  = require('./panels/enhanceMatPanel');
+const enhanceResultPanel = require('./panels/enhanceResultPanel');
 
 const { updateMarketPanel }      = require('./public/marketPublic');
 const { updateWonderTradePanel } = require('./public/wonderTradePublic');
@@ -41,6 +45,8 @@ function getPanel(page, userId, guildId, user, extra) {
     case 'feedqty':  return feedQtyPanel.build(userId, user, extra);
     case 'detail':   return petDetailPanel.build(userId, user, extra);
     case 'sell':     return sellPanel.build(userId, guildId, user, extra);
+    case 'enhance':  return enhancePanel.build(userId, user);
+    case 'enhancemat': return enhanceMatPanel.build(userId, user, extra);
     default:         return mainPanel.build(userId, user);
   }
 }
@@ -182,6 +188,80 @@ async function handleAction(interaction, userId, guildId, action, extra) {
     return interaction.editReply(panel);
   }
 
+  // Enhance mat panel state update
+  if (action === 'emat') {
+    await interaction.deferUpdate();
+    const user = petManager.getUser(guildId, userId);
+    return interaction.editReply(enhanceMatPanel.build(userId, user, extra));
+  }
+
+  // Execute enhancement
+  if (action === 'doenhance') {
+    await interaction.deferUpdate();
+    const { instId, mats, protect, boost } = enhanceMatPanel.decodeState(extra);
+    const user    = petManager.getUser(guildId, userId);
+    const petIdx  = user.pets.findIndex(p => p.instanceId === instId);
+
+    if (petIdx === -1) return interaction.editReply(mainPanel.build(userId, user));
+
+    const pet = user.pets[petIdx];
+
+    // Validate cards in inventory
+    if (protect && !(user.items?.card_protect > 0)) {
+      const panel = enhanceMatPanel.build(userId, user, extra);
+      panel.embeds[0].setFooter({ text: '❌ ไม่มีบัตรป้องกัน' });
+      return interaction.editReply(panel);
+    }
+    const boostId = boost === 1 ? 'card_boost_s' : boost === 2 ? 'card_boost_m' : null;
+    if (boostId && !(user.items?.[boostId] > 0)) {
+      const panel = enhanceMatPanel.build(userId, user, extra);
+      panel.embeds[0].setFooter({ text: '❌ ไม่มีบัตรเพิ่มเรท' });
+      return interaction.editReply(panel);
+    }
+
+    // Gather and remove mat pets
+    const matPets = enhanceMatPanel.resolveMats(user.pets, instId, mats);
+    const matIds  = new Set(matPets.map(m => m.instanceId));
+    user.pets     = user.pets.filter(p => !matIds.has(p.instanceId));
+
+    // Consume cards
+    if (protect)  user.items.card_protect = Math.max(0, (user.items.card_protect || 0) - 1);
+    if (boostId)  user.items[boostId]     = Math.max(0, (user.items[boostId]     || 0) - 1);
+
+    // Execute
+    const result = enhanceManager.enhance(pet, matPets, protect, boost);
+
+    // Save (pet is mutated in place inside user.pets)
+    petManager.saveUser(guildId, userId, user);
+
+    const freshUser = petManager.getUser(guildId, userId);
+    const freshPet  = freshUser.pets.find(p => p.instanceId === instId) || pet;
+    return interaction.editReply(enhanceResultPanel.build(userId, freshUser, freshPet, result));
+  }
+
+  // Buy card from shop
+  if (action === 'buycard') {
+    await interaction.deferUpdate();
+    const itemId = extra;
+    const item   = petManager.ITEM_CATALOG[itemId];
+    const user   = petManager.getUser(guildId, userId);
+
+    if (!item) return interaction.editReply(shopPanel.build(userId, user));
+
+    if ((user.coins || 0) < item.price) {
+      const panel = shopPanel.build(userId, user);
+      panel.embeds[0].setFooter({ text: `❌ เหรียญไม่พอ — ต้องการ ${item.price.toLocaleString()} coins` });
+      return interaction.editReply(panel);
+    }
+
+    petManager.addCoins(guildId, userId, -item.price);
+    petManager.addItem(guildId, userId, itemId, 1);
+    const fresh = petManager.getUser(guildId, userId);
+    const panel = shopPanel.build(userId, fresh);
+    panel.embeds[0].setFooter({ text: `✅ ซื้อ ${item.name} สำเร็จ! (-${item.price.toLocaleString()} coins)` });
+    return interaction.editReply(panel);
+  }
+
   // Open sell panel
   if (action === 'sell') {
     await interaction.deferUpdate();
@@ -268,6 +348,17 @@ async function handleSelect(interaction) {
     await interaction.deferUpdate();
     const user  = petManager.getUser(guildId, userId);
     return interaction.editReply(petDetailPanel.build(userId, user, value));
+  }
+
+  // Enhance pet selection → go to mat panel
+  if (id.startsWith('petsel_enhance_')) {
+    const userId = id.split('_')[2];
+    if (!checkOwner(interaction, userId)) return;
+    await interaction.deferUpdate();
+    const user      = petManager.getUser(guildId, userId);
+    const instId    = value;
+    const emptyState = enhanceMatPanel.encodeState(instId, { c: 0, u: 0, r: 0, e: 0, l: 0 }, false, 0);
+    return interaction.editReply(enhanceMatPanel.build(userId, user, emptyState));
   }
 
   // Feed selection (step 1) → go to qty panel
@@ -391,7 +482,7 @@ async function handleSelect(interaction) {
     }
 
     petManager.removePet(guildId, userId, instanceId);
-    marketManager.addListing(guildId, userId, interaction.user.username, instanceId, pet.speciesId, price);
+    marketManager.addListing(guildId, userId, interaction.user.username, instanceId, pet.speciesId, price, pet.enhanceLevel || 0);
     marketManager.recordTrade(guildId, pet.speciesId, 'sell', userId);
     updateMarketPanel(interaction.client, guildId).catch(() => {});
 
