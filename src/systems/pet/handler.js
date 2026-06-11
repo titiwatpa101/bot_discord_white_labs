@@ -4,14 +4,16 @@ const wtManager       = require('./managers/wonderTradeManager');
 const spawnManager    = require('./managers/spawnManager');
 const catalog         = require('./data/catalog.json');
 
-const mainPanel       = require('./panels/mainPanel');
-const petsPanel       = require('./panels/petsPanel');
-const petDetailPanel  = require('./panels/petDetailPanel');
-const shopPanel       = require('./panels/shopPanel');
-const marketPanel     = require('./panels/marketPanel');
+const mainPanel        = require('./panels/mainPanel');
+const petsPanel        = require('./panels/petsPanel');
+const petDetailPanel   = require('./panels/petDetailPanel');
+const shopPanel        = require('./panels/shopPanel');
+const shopQtyPanel     = require('./panels/shopQtyPanel');
+const marketPanel      = require('./panels/marketPanel');
 const wonderTradePanel = require('./panels/wonderTradePanel');
-const feedPanel       = require('./panels/feedPanel');
-const sellPanel       = require('./panels/sellPanel');
+const feedPanel        = require('./panels/feedPanel');
+const feedQtyPanel     = require('./panels/feedQtyPanel');
+const sellPanel        = require('./panels/sellPanel');
 
 const { updateMarketPanel }      = require('./public/marketPublic');
 const { updateWonderTradePanel } = require('./public/wonderTradePublic');
@@ -28,16 +30,18 @@ function checkOwner(interaction, userId) {
 
 function getPanel(page, userId, guildId, user, extra) {
   switch (page) {
-    case 'main':   return mainPanel.build(userId, user);
-    case 'pets':   return petsPanel.build(userId, user);
-    case 'shop':   return shopPanel.build(userId, user);
-    case 'market': return marketPanel.build(userId, guildId, user);
-    case 'trade':  return wonderTradePanel.build(userId, guildId, user);
+    case 'main':     return mainPanel.build(userId, user);
+    case 'pets':     return petsPanel.build(userId, user);
+    case 'shop':     return shopPanel.build(userId, user);
+    case 'shopqty':  return shopQtyPanel.build(userId, guildId, user, extra);
+    case 'market':   return marketPanel.build(userId, guildId, user);
+    case 'trade':    return wonderTradePanel.build(userId, guildId, user);
     case 'feed':
     case 'feedmenu': return feedPanel.build(userId, user);
-    case 'detail': return petDetailPanel.build(userId, user, extra);
-    case 'sell':   return sellPanel.build(userId, guildId, user, extra);
-    default:       return mainPanel.build(userId, user);
+    case 'feedqty':  return feedQtyPanel.build(userId, user, extra);
+    case 'detail':   return petDetailPanel.build(userId, user, extra);
+    case 'sell':     return sellPanel.build(userId, guildId, user, extra);
+    default:         return mainPanel.build(userId, user);
   }
 }
 
@@ -67,14 +71,12 @@ async function handleButton(interaction) {
     return interaction.editReply(panel);
   }
 
-  // ── Navigation: pet_nav_USERID_PAGE or pet_nav_USERID_PAGE_EXTRA ─────────
+  // ── Navigation: pet_nav_USERID_PAGE[_EXTRA...] ───────────────────────────
   if (id.startsWith('pet_nav_')) {
     const parts  = id.split('_');
-    // pet_nav_USERID_PAGE_EXTRA
-    // parts: ['pet','nav','USERID','PAGE','EXTRA']  (userId may contain underscores? No — Discord IDs are numeric)
     const userId = parts[2];
     const page   = parts[3];
-    const extra  = parts[4] || null;
+    const extra  = parts.slice(4).join('_') || null;
 
     if (!checkOwner(interaction, userId)) return;
     await interaction.deferUpdate();
@@ -83,14 +85,12 @@ async function handleButton(interaction) {
     return interaction.editReply(panel);
   }
 
-  // ── Actions: pet_act_USERID_ACTION_EXTRA ─────────────────────────────────
+  // ── Actions: pet_act_USERID_ACTION[_EXTRA...] ────────────────────────────
   if (id.startsWith('pet_act_')) {
     const parts  = id.split('_');
-    // pet_act_USERID_ACTION_EXTRA
-    // parts: ['pet','act','USERID','ACTION','EXTRA']
     const userId = parts[2];
     const action = parts[3];
-    const extra  = parts[4] || null;
+    const extra  = parts.slice(4).join('_') || null;
 
     if (!checkOwner(interaction, userId)) return;
     return handleAction(interaction, userId, guildId, action, extra);
@@ -117,6 +117,71 @@ async function handleAction(interaction, userId, guildId, action, extra) {
     return interaction.editReply(panel);
   }
 
+  // Feed with quantity — extra = "foodId:qty"
+  if (action === 'feedqty') {
+    await interaction.deferUpdate();
+    const colonIdx = extra.lastIndexOf(':');
+    const foodId   = extra.slice(0, colonIdx);
+    const qty      = parseInt(extra.slice(colonIdx + 1), 10);
+    const food     = petManager.FOOD_CATALOG[foodId];
+
+    if (!food || isNaN(qty) || qty <= 0) {
+      const user = petManager.getUser(guildId, userId);
+      return interaction.editReply(feedPanel.build(userId, user));
+    }
+
+    const success = petManager.useFood(guildId, userId, foodId, qty);
+    if (!success) {
+      const user  = petManager.getUser(guildId, userId);
+      const panel = feedQtyPanel.build(userId, user, foodId);
+      panel.embeds[0].setFooter({ text: `❌ อาหารไม่พอ — ต้องการ ${qty} ชิ้น` });
+      return interaction.editReply(panel);
+    }
+
+    const result = petManager.addExp(guildId, userId, food.exp * qty);
+    const user   = petManager.getUser(guildId, userId);
+
+    if (result?.leveled) {
+      const panel = mainPanel.build(userId, user);
+      panel.embeds[0].setFooter({ text: `🎉 ${catalog[result.pet.speciesId]?.name} เลเวลอัป → Lv.${result.pet.level}! (+${food.exp * qty} EXP)` });
+      return interaction.editReply(panel);
+    }
+
+    const panel = feedQtyPanel.build(userId, user, foodId);
+    panel.embeds[0].setFooter({ text: `✅ ให้ ${food.name} × ${qty}  (+${food.exp * qty} EXP)` });
+    return interaction.editReply(panel);
+  }
+
+  // Buy with quantity — extra = "foodId:qty"
+  if (action === 'buyqty') {
+    await interaction.deferUpdate();
+    const colonIdx = extra.lastIndexOf(':');
+    const foodId   = extra.slice(0, colonIdx);
+    const qty      = parseInt(extra.slice(colonIdx + 1), 10);
+    const food     = petManager.FOOD_CATALOG[foodId];
+
+    if (!food || isNaN(qty) || qty <= 0) {
+      const user = petManager.getUser(guildId, userId);
+      return interaction.editReply(shopPanel.build(userId, user));
+    }
+
+    const cost = food.price * qty;
+    const user = petManager.getUser(guildId, userId);
+
+    if ((user.coins || 0) < cost) {
+      const panel = shopQtyPanel.build(userId, guildId, user, foodId);
+      panel.embeds[0].setFooter({ text: `❌ เหรียญไม่พอ — ต้องการ ${cost.toLocaleString()} coins` });
+      return interaction.editReply(panel);
+    }
+
+    petManager.addCoins(guildId, userId, -cost);
+    petManager.addFood(guildId, userId, foodId, qty);
+    const fresh = petManager.getUser(guildId, userId);
+    const panel = shopQtyPanel.build(userId, guildId, fresh, foodId);
+    panel.embeds[0].setFooter({ text: `✅ ซื้อ ${food.name} × ${qty} สำเร็จ! (-${cost.toLocaleString()} coins)` });
+    return interaction.editReply(panel);
+  }
+
   // Open sell panel
   if (action === 'sell') {
     await interaction.deferUpdate();
@@ -135,14 +200,11 @@ async function handleAction(interaction, userId, guildId, action, extra) {
       return interaction.editReply(panel);
     }
 
-    // Check if already in pool
     if (wtManager.inPool(guildId, userId)) {
       const entry = wtManager.matchTrade(guildId, userId);
       if (entry) {
-        // Match found! Swap pets
         await executeWonderTrade(interaction, userId, guildId, extra, entry);
       } else {
-        // Just update submission
         submitToPool(guildId, userId, interaction.user.username, pet);
       }
     } else {
@@ -182,20 +244,14 @@ function submitToPool(guildId, userId, username, pet) {
 }
 
 async function executeWonderTrade(interaction, userId, guildId, myInstanceId, theirEntry) {
-  // Remove my pet from inventory (already done in submitToPool path)
   const myPet = petManager.getUser(guildId, userId).pets.find(p => p.instanceId === myInstanceId);
   if (myPet) petManager.removePet(guildId, userId, myInstanceId);
 
-  // Give me their pet
-  const myNewPet = petManager.addPet(guildId, userId, theirEntry.speciesId);
-  petManager.addExp(guildId, userId, 30); // exp for active pet
+  petManager.addPet(guildId, userId, theirEntry.speciesId);
+  petManager.addExp(guildId, userId, 30);
 
-  // Give them my pet — they need to be a member of this guild
   petManager.addPet(guildId, theirEntry.userId, myPet?.speciesId || 'cat_orange');
   petManager.addExp(guildId, theirEntry.userId, 30);
-
-  // Notify their user via ephemeral isn't possible without their interaction
-  // Just update the pool panel — they'll see pool updated
 }
 
 // ─── Select Menu Handler ──────────────────────────────────────────────────────
@@ -214,59 +270,32 @@ async function handleSelect(interaction) {
     return interaction.editReply(petDetailPanel.build(userId, user, value));
   }
 
-  // Feed selection → use food
+  // Feed selection (step 1) → go to qty panel
   if (id.startsWith('petsel_feed_')) {
     const userId = id.split('_')[2];
     if (!checkOwner(interaction, userId)) return;
     await interaction.deferUpdate();
-
-    const foodId  = value;
-    const food    = petManager.FOOD_CATALOG[foodId];
-    const success = petManager.useFood(guildId, userId, foodId);
-
-    if (!success) {
-      const user  = petManager.getUser(guildId, userId);
-      return interaction.editReply(feedPanel.build(userId, user));
-    }
-
-    const result = petManager.addExp(guildId, userId, food.exp);
-    const user   = petManager.getUser(guildId, userId);
-    const panel  = result?.leveled
-      ? mainPanel.build(userId, user) // back to main on level up (celebration)
-      : feedPanel.build(userId, user);
-
-    // Inject level-up notice in embed if leveled
-    if (result?.leveled) {
-      panel.embeds[0].setFooter({ text: `🎉 ${catalog[result.pet.speciesId]?.name} เลเวลอัป → Lv.${result.pet.level}!` });
-    }
-
-    return interaction.editReply(panel);
+    const user  = petManager.getUser(guildId, userId);
+    return interaction.editReply(feedQtyPanel.build(userId, user, value));
   }
 
-  // Shop purchase
+  // Shop item selection (step 1) → go to qty panel
+  if (id.startsWith('petsel_shopitem_')) {
+    const userId = id.split('_')[2];
+    if (!checkOwner(interaction, userId)) return;
+    await interaction.deferUpdate();
+    const user  = petManager.getUser(guildId, userId);
+    return interaction.editReply(shopQtyPanel.build(userId, guildId, user, value));
+  }
+
+  // Legacy petsel_shop_ handler (backward compat for old messages)
   if (id.startsWith('petsel_shop_')) {
     const userId = id.split('_')[2];
     if (!checkOwner(interaction, userId)) return;
     await interaction.deferUpdate();
-
-    const [foodId, qtyStr] = value.split('__');
-    const qty   = parseInt(qtyStr, 10);
-    const food  = petManager.FOOD_CATALOG[foodId];
-    const cost  = food.price * qty;
+    const [foodId] = value.split('__');
     const user  = petManager.getUser(guildId, userId);
-
-    if ((user.coins || 0) < cost) {
-      const panel = shopPanel.build(userId, user);
-      panel.embeds[0].setFooter({ text: `❌ เหรียญไม่พอ — ต้องการ ${cost.toLocaleString()} coins` });
-      return interaction.editReply(panel);
-    }
-
-    petManager.addCoins(guildId, userId, -cost);
-    petManager.addFood(guildId, userId, foodId, qty);
-    const fresh = petManager.getUser(guildId, userId);
-    const panel = shopPanel.build(userId, fresh);
-    panel.embeds[0].setFooter({ text: `✅ ซื้อ ${food.name} × ${qty} สำเร็จ! (-${cost.toLocaleString()} coins)` });
-    return interaction.editReply(panel);
+    return interaction.editReply(shopQtyPanel.build(userId, guildId, user, foodId));
   }
 
   // Market buy
@@ -294,12 +323,11 @@ async function handleSelect(interaction) {
       return interaction.editReply(panel);
     }
 
-    // Execute trade
     marketManager.removeListing(guildId, listing.listingId);
     petManager.addCoins(guildId, userId, -listing.price);
     petManager.addCoins(guildId, listing.userId, listing.price);
     petManager.addPet(guildId, userId, listing.speciesId);
-    petManager.addExp(guildId, userId, 15); // exp for catching/buying
+    petManager.addExp(guildId, userId, 15);
 
     marketManager.recordTrade(guildId, listing.speciesId, 'buy', userId);
     updateMarketPanel(interaction.client, guildId).catch(() => {});
@@ -323,10 +351,8 @@ async function handleSelect(interaction) {
       return interaction.editReply(wonderTradePanel.build(userId, guildId, user));
     }
 
-    // Try to match first
     const match = wtManager.matchTrade(guildId, userId);
     if (match) {
-      // Immediate match!
       petManager.removePet(guildId, userId, pet.instanceId);
       petManager.addPet(guildId, userId, match.speciesId);
       petManager.addExp(guildId, userId, 30);
@@ -341,7 +367,6 @@ async function handleSelect(interaction) {
       return interaction.editReply(panel);
     }
 
-    // No match — enter pool
     submitToPool(guildId, userId, interaction.user.username, pet);
     updateWonderTradePanel(interaction.client, guildId).catch(() => {});
     const freshUser = petManager.getUser(guildId, userId);
@@ -365,7 +390,6 @@ async function handleSelect(interaction) {
       return interaction.editReply(mainPanel.build(userId, user));
     }
 
-    // Remove from inventory and create listing
     petManager.removePet(guildId, userId, instanceId);
     marketManager.addListing(guildId, userId, interaction.user.username, instanceId, pet.speciesId, price);
     marketManager.recordTrade(guildId, pet.speciesId, 'sell', userId);
@@ -398,7 +422,6 @@ async function handleSpawnClaim(interaction) {
   petManager.addExp(guildId, userId, 15);
   const sp = catalog[spawn.speciesId];
 
-  // Disable button on spawn message
   try {
     const msg = await interaction.channel.messages.fetch(spawn.messageId).catch(() => null);
     if (msg) {

@@ -4,9 +4,13 @@ const path = require('path');
 const DATA_PATH = path.join(__dirname, '../data/users.json');
 
 const FOOD_CATALOG = {
-  food_basic: { name: 'หญ้าธรรมดา 🌿', price: 10,  exp: 10  },
-  food_meat:  { name: 'เนื้อสด 🍖',    price: 50,  exp: 50  },
-  food_ultra: { name: 'อาหารพิเศษ ✨', price: 200, exp: 200 },
+  food_herb:    { name: 'ใบยาสมุนไพร 🌿', price: 5,   exp: 5   },
+  food_basic:   { name: 'หญ้าธรรมดา 🌾',  price: 10,  exp: 10  },
+  food_fish:    { name: 'ปลาสด 🐟',       price: 30,  exp: 30  },
+  food_meat:    { name: 'เนื้อสด 🍖',     price: 50,  exp: 50  },
+  food_premium: { name: 'อาหารพรีเมียม 🍱', price: 100, exp: 100 },
+  food_ultra:   { name: 'อาหารพิเศษ ✨',  price: 200, exp: 200 },
+  food_legend:  { name: 'อาหารตำนาน 👑',  price: 500, exp: 500 },
 };
 
 function load() {
@@ -24,9 +28,16 @@ function getUser(guildId, userId) {
   const data = load();
   const k    = key(guildId, userId);
   if (!data[k]) {
-    data[k] = { coins: 0, food: { food_basic: 0, food_meat: 0, food_ultra: 0 }, pets: [] };
+    data[k] = { coins: 0, food: Object.fromEntries(Object.keys(FOOD_CATALOG).map(id => [id, 0])), pets: [] };
     save(data);
+    return data[k];
   }
+  // Backfill new food types for existing users
+  let dirty = false;
+  for (const foodId of Object.keys(FOOD_CATALOG)) {
+    if (data[k].food[foodId] === undefined) { data[k].food[foodId] = 0; dirty = true; }
+  }
+  if (dirty) save(data);
   return data[k];
 }
 
@@ -106,10 +117,11 @@ function addFood(guildId, userId, foodId, qty) {
   saveUser(guildId, userId, user);
 }
 
-function useFood(guildId, userId, foodId) {
+function useFood(guildId, userId, foodId, qty = 1) {
   const user = getUser(guildId, userId);
-  if (!user.food[foodId] || user.food[foodId] <= 0) return false;
-  user.food[foodId]--;
+  const have = user.food[foodId] || 0;
+  if (have < qty) return false;
+  user.food[foodId] = have - qty;
   saveUser(guildId, userId, user);
   return true;
 }

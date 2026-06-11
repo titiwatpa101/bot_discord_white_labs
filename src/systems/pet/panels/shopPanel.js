@@ -1,14 +1,12 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const { FOOD_CATALOG } = require('../managers/petManager');
 
-const QTY_OPTIONS = [1, 5, 10];
-
 function build(userId, user) {
-  const uid    = userId;
-  const coins  = user.coins || 0;
+  const uid   = userId;
+  const coins = user.coins || 0;
 
   const lines = Object.entries(FOOD_CATALOG).map(([id, f]) =>
-    `${f.name}  —  **${f.price}c** (+${f.exp} EXP)  •  มีอยู่: ${user.food[id] || 0} ชิ้น`
+    `${f.name}  —  **${f.price.toLocaleString()}c** / ชิ้น  (+${f.exp} EXP)  •  คลัง: ${user.food[id] || 0}`
   );
 
   const embed = new EmbedBuilder()
@@ -17,24 +15,16 @@ function build(userId, user) {
     .setColor(0x5865f2)
     .setFooter({ text: `💰 เหรียญของคุณ: ${coins.toLocaleString()} coins` });
 
-  const options = [];
-  for (const [id, f] of Object.entries(FOOD_CATALOG)) {
-    for (const qty of QTY_OPTIONS) {
-      const total = f.price * qty;
-      if (total <= coins || true) { // always show, disable handled via coins check in handler
-        options.push({
-          label:       `${f.name} × ${qty}`,
-          description: `${total.toLocaleString()} coins  →  +${f.exp * qty} EXP รวม`,
-          value:       `${id}__${qty}`,
-          emoji:       '🛒',
-        });
-      }
-    }
-  }
+  const options = Object.entries(FOOD_CATALOG).map(([id, f]) => ({
+    label:       f.name,
+    description: `${f.price.toLocaleString()} coins/ชิ้น  •  +${f.exp} EXP/ชิ้น`,
+    value:       id,
+    emoji:       coins >= f.price ? '🛒' : '💸',
+  }));
 
   const row1 = new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
-      .setCustomId(`petsel_shop_${uid}`)
+      .setCustomId(`petsel_shopitem_${uid}`)
       .setPlaceholder('เลือกอาหารที่ต้องการซื้อ...')
       .addOptions(options)
   );
