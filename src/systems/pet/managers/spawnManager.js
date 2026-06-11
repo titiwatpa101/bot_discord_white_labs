@@ -52,17 +52,40 @@ function pickSpecies() {
   return entries[0][0];
 }
 
-function startSpawnLoop(client, guildId) {
+function startSpawnLoop(client, guildId, resumeFromNow = false) {
   if (spawnTimers.has(guildId)) clearInterval(spawnTimers.get(guildId));
   const config   = getConfig(guildId);
   const interval = (config.intervalMinutes || 30) * 60_000;
-  const timer    = setInterval(() => triggerSpawn(client, guildId), interval);
-  spawnTimers.set(guildId, timer);
+
+  // Calculate remaining delay so restart doesn't reset the timer
+  let firstDelay = interval;
+  if (!resumeFromNow && config.lastSpawnAt) {
+    const elapsed  = Date.now() - config.lastSpawnAt;
+    firstDelay     = Math.max(0, interval - elapsed);
+  }
+
+  const schedule = () => {
+    triggerSpawn(client, guildId);
+    // After first fire, use normal interval
+    const t = setInterval(() => triggerSpawn(client, guildId), interval);
+    spawnTimers.set(guildId, t);
+  };
+
+  if (firstDelay === 0) {
+    schedule();
+  } else {
+    const t = setTimeout(schedule, firstDelay);
+    spawnTimers.set(guildId, t);
+  }
 }
 
 async function triggerSpawn(client, guildId) {
   const config = getConfig(guildId);
   if (!config.channels.length) return;
+
+  // Persist last spawn time so restarts can resume where they left off
+  const data = load();
+  if (data[guildId]) { data[guildId].lastSpawnAt = Date.now(); save(data); }
 
   const { getCurrentPrice }  = require('./marketManager');
   const { buildSpawnEmbed, buildSpawnExpiredEmbed } = require('../public/spawnPublic');
