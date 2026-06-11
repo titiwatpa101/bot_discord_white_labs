@@ -39,10 +39,10 @@ function build(userId, user, foodId) {
     )
   );
 
-  // Row 2: feed all + back
+  // Row 2: feed all (uses 'feedall' action to avoid customId clash with qty buttons) + back
   const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`pet_act_${uid}_feedqty_${foodId}:${have}`)
+      .setCustomId(`pet_act_${uid}_feedall_${foodId}`)
       .setLabel(`×ทั้งหมด (${have} ชิ้น  +${(food?.exp || 0) * have} EXP)`)
       .setStyle(ButtonStyle.Success)
       .setDisabled(have === 0),

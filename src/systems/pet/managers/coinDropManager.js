@@ -3,6 +3,7 @@ const path = require('path');
 
 const catalog    = require('../data/catalog.json');
 const petManager = require('./petManager');
+const { ENHANCE_COIN_BONUS } = require('./enhanceManager');
 
 const USERS_PATH = path.join(__dirname, '../data/users.json');
 
@@ -26,8 +27,9 @@ function calcDrop(user) {
     if (!sp) return total;
     const base        = RARITY_BASE[sp.rarity] || 1;
     const levelBonus  = Math.sqrt(pet.level || 1);
-    const activeBonus = idx === 0 ? 1.5 : 1.0; // active pet slot bonus
-    return total + Math.floor(base * levelBonus * activeBonus);
+    const activeBonus = idx === 0 ? 1.5 : 1.0;
+    const enhBonus    = 1 + (ENHANCE_COIN_BONUS[pet.enhanceLevel || 0] || 0);
+    return total + Math.floor(base * levelBonus * activeBonus * enhBonus);
   }, 0);
 }
 

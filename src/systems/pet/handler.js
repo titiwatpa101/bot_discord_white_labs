@@ -161,6 +161,31 @@ async function handleAction(interaction, userId, guildId, action, extra) {
     return interaction.editReply(panel);
   }
 
+  // Feed all of a food type
+  if (action === 'feedall') {
+    await interaction.deferUpdate();
+    const foodId = extra;
+    const food   = petManager.FOOD_CATALOG[foodId];
+    const user   = petManager.getUser(guildId, userId);
+    const have   = user.food[foodId] || 0;
+
+    if (!food || have === 0) return interaction.editReply(feedQtyPanel.build(userId, user, foodId));
+
+    petManager.useFood(guildId, userId, foodId, have);
+    const result = petManager.addExp(guildId, userId, food.exp * have);
+    const fresh  = petManager.getUser(guildId, userId);
+
+    if (result?.leveled) {
+      const panel = mainPanel.build(userId, fresh);
+      panel.embeds[0].setFooter({ text: `🎉 ${catalog[result.pet.speciesId]?.name} เลเวลอัป → Lv.${result.pet.level}! (+${food.exp * have} EXP)` });
+      return interaction.editReply(panel);
+    }
+
+    const panel = feedQtyPanel.build(userId, fresh, foodId);
+    panel.embeds[0].setFooter({ text: `✅ ให้ ${food.name} × ${have}  (+${food.exp * have} EXP)` });
+    return interaction.editReply(panel);
+  }
+
   // Buy with quantity — extra = "foodId:qty"
   if (action === 'buyqty') {
     await interaction.deferUpdate();
