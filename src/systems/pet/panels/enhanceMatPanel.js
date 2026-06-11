@@ -140,13 +140,13 @@ function build(userId, user, stateStr) {
     })
   );
 
-  // Row 2: -mats
+  // Row 2: -mats (always append :_k suffix so customIds are always unique)
   const row2 = new ActionRowBuilder().addComponents(
     ['c', 'u', 'r', 'e', 'l'].map(k => {
       const rarity = { c: 'common', u: 'uncommon', r: 'rare', e: 'epic', l: 'legendary' }[k];
       const newMats = { ...mats, [k]: Math.max(0, mats[k] - 1) };
       return new ButtonBuilder()
-        .setCustomId(`pet_act_${uid}_emat_${encodeState(instId, newMats, protect, boost)}`)
+        .setCustomId(`pet_act_${uid}_emat_${encodeState(instId, newMats, protect, boost)}:_${k}`)
         .setLabel(`-${RARITY_EMOJI[rarity]}(${mats[k]})`)
         .setStyle(ButtonStyle.Danger)
         .setDisabled(mats[k] <= 0);
