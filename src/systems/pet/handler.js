@@ -22,6 +22,10 @@ const enhanceResultPanel = require('./panels/enhanceResultPanel');
 const { updateMarketPanel }      = require('./public/marketPublic');
 const { updateWonderTradePanel } = require('./public/wonderTradePublic');
 
+// ─── Enhance Sessions ─────────────────────────────────────────────────────────
+// key: `${guildId}_${userId}`  value: { targetInstId, materialInstIds[], protect, boost }
+const enhanceSessions = new Map();
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function checkOwner(interaction, userId) {
@@ -46,7 +50,6 @@ function getPanel(page, userId, guildId, user, extra) {
     case 'detail':   return petDetailPanel.build(userId, user, extra);
     case 'sell':     return sellPanel.build(userId, guildId, user, extra);
     case 'enhance':  return enhancePanel.build(userId, user);
-    case 'enhancemat': return enhanceMatPanel.build(userId, user, extra);
     default:         return mainPanel.build(userId, user);
   }
 }
@@ -188,54 +191,103 @@ async function handleAction(interaction, userId, guildId, action, extra) {
     return interaction.editReply(panel);
   }
 
-  // Enhance mat panel state update
-  if (action === 'emat') {
+  // Enhance: toggle protect
+  if (action === 'eprot') {
     await interaction.deferUpdate();
+    const sessionKey = `${guildId}_${userId}`;
+    const session    = enhanceSessions.get(sessionKey);
+    if (!session) return interaction.editReply(enhancePanel.build(userId, petManager.getUser(guildId, userId)));
+    session.protect = !session.protect;
     const user = petManager.getUser(guildId, userId);
-    return interaction.editReply(enhanceMatPanel.build(userId, user, extra));
+    return interaction.editReply(enhanceMatPanel.build(userId, user, session));
+  }
+
+  // Enhance: cycle boost card
+  if (action === 'eboost') {
+    await interaction.deferUpdate();
+    const sessionKey = `${guildId}_${userId}`;
+    const session    = enhanceSessions.get(sessionKey);
+    if (!session) return interaction.editReply(enhancePanel.build(userId, petManager.getUser(guildId, userId)));
+    session.boost = [1, 2, 0][session.boost];
+    const user = petManager.getUser(guildId, userId);
+    return interaction.editReply(enhanceMatPanel.build(userId, user, session));
+  }
+
+  // Enhance: clear selection
+  if (action === 'eclear') {
+    await interaction.deferUpdate();
+    const sessionKey = `${guildId}_${userId}`;
+    const session    = enhanceSessions.get(sessionKey);
+    if (!session) return interaction.editReply(enhancePanel.build(userId, petManager.getUser(guildId, userId)));
+    session.materialInstIds = [];
+    session.protect         = false;
+    session.boost           = 0;
+    const user = petManager.getUser(guildId, userId);
+    return interaction.editReply(enhanceMatPanel.build(userId, user, session));
+  }
+
+  // Enhance: try again (reset mats, keep target)
+  if (action === 'reagain') {
+    await interaction.deferUpdate();
+    const sessionKey = `${guildId}_${userId}`;
+    const session    = enhanceSessions.get(sessionKey);
+    if (!session) return interaction.editReply(enhancePanel.build(userId, petManager.getUser(guildId, userId)));
+    session.materialInstIds = [];
+    session.protect         = false;
+    session.boost           = 0;
+    const user = petManager.getUser(guildId, userId);
+    return interaction.editReply(enhanceMatPanel.build(userId, user, session));
   }
 
   // Execute enhancement
   if (action === 'doenhance') {
     await interaction.deferUpdate();
-    const { instId, mats, protect, boost } = enhanceMatPanel.decodeState(extra);
-    const user    = petManager.getUser(guildId, userId);
-    const petIdx  = user.pets.findIndex(p => p.instanceId === instId);
+    const sessionKey = `${guildId}_${userId}`;
+    const session    = enhanceSessions.get(sessionKey);
+    if (!session) return interaction.editReply(mainPanel.build(userId, petManager.getUser(guildId, userId)));
 
+    const { targetInstId, materialInstIds, protect, boost } = session;
+    const user   = petManager.getUser(guildId, userId);
+    const petIdx = user.pets.findIndex(p => p.instanceId === targetInstId);
     if (petIdx === -1) return interaction.editReply(mainPanel.build(userId, user));
 
     const pet = user.pets[petIdx];
 
-    // Validate cards in inventory
+    // Validate cards
     if (protect && !(user.items?.card_protect > 0)) {
-      const panel = enhanceMatPanel.build(userId, user, extra);
+      const panel = enhanceMatPanel.build(userId, user, session);
       panel.embeds[0].setFooter({ text: '❌ ไม่มีบัตรป้องกัน' });
       return interaction.editReply(panel);
     }
     const boostId = boost === 1 ? 'card_boost_s' : boost === 2 ? 'card_boost_m' : null;
     if (boostId && !(user.items?.[boostId] > 0)) {
-      const panel = enhanceMatPanel.build(userId, user, extra);
+      const panel = enhanceMatPanel.build(userId, user, session);
       panel.embeds[0].setFooter({ text: '❌ ไม่มีบัตรเพิ่มเรท' });
       return interaction.editReply(panel);
     }
 
     // Gather and remove mat pets
-    const matPets = enhanceMatPanel.resolveMats(user.pets, instId, mats);
+    const matPets = (materialInstIds || [])
+      .map(id => user.pets.find(p => p.instanceId === id))
+      .filter(Boolean);
     const matIds  = new Set(matPets.map(m => m.instanceId));
     user.pets     = user.pets.filter(p => !matIds.has(p.instanceId));
 
     // Consume cards
-    if (protect)  user.items.card_protect = Math.max(0, (user.items.card_protect || 0) - 1);
-    if (boostId)  user.items[boostId]     = Math.max(0, (user.items[boostId]     || 0) - 1);
+    if (protect) user.items.card_protect = Math.max(0, (user.items.card_protect || 0) - 1);
+    if (boostId) user.items[boostId]     = Math.max(0, (user.items[boostId]     || 0) - 1);
 
     // Execute
     const result = enhanceManager.enhance(pet, matPets, protect, boost);
-
-    // Save (pet is mutated in place inside user.pets)
     petManager.saveUser(guildId, userId, user);
 
+    // Reset session materials
+    session.materialInstIds = [];
+    session.protect         = false;
+    session.boost           = 0;
+
     const freshUser = petManager.getUser(guildId, userId);
-    const freshPet  = freshUser.pets.find(p => p.instanceId === instId) || pet;
+    const freshPet  = freshUser.pets.find(p => p.instanceId === targetInstId) || pet;
     return interaction.editReply(enhanceResultPanel.build(userId, freshUser, freshPet, result));
   }
 
@@ -350,15 +402,30 @@ async function handleSelect(interaction) {
     return interaction.editReply(petDetailPanel.build(userId, user, value));
   }
 
-  // Enhance pet selection → go to mat panel
+  // Enhance pet selection (step 1) → create session, go to mat panel
   if (id.startsWith('petsel_enhance_')) {
     const userId = id.split('_')[2];
     if (!checkOwner(interaction, userId)) return;
     await interaction.deferUpdate();
-    const user      = petManager.getUser(guildId, userId);
-    const instId    = value;
-    const emptyState = enhanceMatPanel.encodeState(instId, { c: 0, u: 0, r: 0, e: 0, l: 0 }, false, 0);
-    return interaction.editReply(enhanceMatPanel.build(userId, user, emptyState));
+    const session = { targetInstId: value, materialInstIds: [], protect: false, boost: 0 };
+    enhanceSessions.set(`${guildId}_${userId}`, session);
+    const user = petManager.getUser(guildId, userId);
+    return interaction.editReply(enhanceMatPanel.build(userId, user, session));
+  }
+
+  // Enhance material selection (step 2) → update session.materialInstIds
+  if (id.startsWith('petsel_emat_')) {
+    const userId = id.slice('petsel_emat_'.length);
+    if (!checkOwner(interaction, userId)) return;
+    const sessionKey = `${guildId}_${userId}`;
+    const session    = enhanceSessions.get(sessionKey);
+    if (!session) {
+      return interaction.reply({ content: '❌ Session หมดอายุ กรุณาเลือกสัตว์ใหม่', ephemeral: true });
+    }
+    session.materialInstIds = interaction.values.filter(v => v !== '__none__').slice(0, 7);
+    await interaction.deferUpdate();
+    const user = petManager.getUser(guildId, userId);
+    return interaction.editReply(enhanceMatPanel.build(userId, user, session));
   }
 
   // Feed selection (step 1) → go to qty panel

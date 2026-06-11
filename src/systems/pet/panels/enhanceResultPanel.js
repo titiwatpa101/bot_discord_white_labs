@@ -1,13 +1,10 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { RARITY_LABEL, RARITY_COLOR } = require('./constants');
-const { encodeState } = require('./enhanceMatPanel');
 const catalog = require('../data/catalog.json');
 
 function build(userId, user, pet, result) {
   const uid = userId;
   const sp  = catalog[pet.speciesId];
-
-  const emptyState = encodeState(pet.instanceId, { c: 0, u: 0, r: 0, e: 0, l: 0 }, false, 0);
 
   let title, color, desc;
 
@@ -31,7 +28,6 @@ function build(userId, user, pet, result) {
       `Rate: ${(result.rate * 100).toFixed(1)}%  |  Roll: ${(result.roll * 100).toFixed(1)}%\n\n` +
       `Pity สะสมเพิ่ม — โอกาสครั้งถัดไปสูงขึ้น`;
   } else {
-    // Failed + level dropped
     const dropped = result.dropped || 0;
     title = dropped > 0 ? '💥 ตีแตก!' : '❌ ตีไม่ติด';
     color = 0xed4245;
@@ -44,9 +40,8 @@ function build(userId, user, pet, result) {
       `Pity สะสมเพิ่ม — โอกาสครั้งถัดไปสูงขึ้น`;
   }
 
-  // Show current pity for next attempt
-  const target   = (pet.enhanceLevel || 0) + 1;
-  const newPity  = ((pet.pityStack || {})[String(target)]) || 0;
+  const target  = (pet.enhanceLevel || 0) + 1;
+  const newPity = ((pet.pityStack || {})[String(target)]) || 0;
   if (newPity > 0 && !result.success) {
     desc += `\n🔥 Pity ระดับ +${target}: **${newPity} ครั้ง**`;
   }
@@ -61,7 +56,7 @@ function build(userId, user, pet, result) {
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`pet_act_${uid}_emat_${emptyState}`)
+      .setCustomId(`pet_act_${uid}_reagain`)
       .setLabel('⚔️ ตีอีกครั้ง')
       .setStyle(ButtonStyle.Primary)
       .setDisabled((pet.enhanceLevel || 0) >= 10),

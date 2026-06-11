@@ -14,14 +14,13 @@ const COMP_RATE = {
   7: 0.04, 8: 0.03, 9: 0.02, 10: 0.01,
 };
 
-// Multiplier applied to (base + pity) based on pet rarity
 const PET_RARITY_MULT = {
   common: 1.5, uncommon: 1.2, rare: 1.0, epic: 0.8, legendary: 0.6,
 };
 
-// Multiplier applied to base rate per material
-const MAT_RARITY_MULT = {
-  common: 1, uncommon: 2, rare: 4, epic: 8, legendary: 16,
+// Flat rate added per material pet (not scaled by base rate)
+const MAT_FLAT_RATE = {
+  common: 0.05, uncommon: 0.10, rare: 0.20, epic: 0.40, legendary: 0.70,
 };
 
 // Max success rate cap by target level and pet rarity
@@ -38,26 +37,22 @@ const MAX_RATE = {
   10: { common: 0.12, uncommon: 0.09, rare: 0.07, epic: 0.04, legendary: 0.02 },
 };
 
-// On fail: random drop to range [min, max]. null = stay
 const FAIL_DROP = {
   1: null, 2: null, 3: null,
   4: [2, 3], 5: [2, 4], 6: [3, 5],
   7: [3, 6], 8: [4, 7], 9: [4, 8], 10: [5, 9],
 };
 
-// Coin drop bonus multiplier per enhance level
 const ENHANCE_COIN_BONUS = {
   0: 0, 1: 0.15, 2: 0.35, 3: 0.65, 4: 1.10,
   5: 1.80, 6: 2.90, 7: 4.50, 8: 6.80, 9: 10.00, 10: 14.50,
 };
 
-// Market price multiplier per enhance level (applies from +5)
 const ENHANCE_PRICE_MULT = {
   0: 1.0, 1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0,
   5: 2.0, 6: 3.2, 7: 5.0, 8: 8.0, 9: 13.0, 10: 20.0,
 };
 
-// Boost card bonus to rate
 const BOOST_BONUS = { 0: 0, 1: 0.10, 2: 0.20 };
 
 // ─── Rate Calculation ─────────────────────────────────────────────────────────
@@ -70,17 +65,17 @@ function calcRate(pet, materials = [], boostCard = 0) {
   const petRarity = sp?.rarity || 'common';
   const pity      = ((pet.pityStack || {})[String(target)]) || 0;
 
-  const base      = BASE_RATE[target] || 0;
-  const comp      = COMP_RATE[target] || 0;
-  const petMult   = PET_RARITY_MULT[petRarity] || 1.0;
-  const cap       = (MAX_RATE[target] || {})[petRarity] ?? 0.80;
+  const base    = BASE_RATE[target] || 0;
+  const comp    = COMP_RATE[target] || 0;
+  const petMult = PET_RARITY_MULT[petRarity] || 1.0;
+  const cap     = (MAX_RATE[target] || {})[petRarity] ?? 0.80;
 
   let raw = (base + pity * comp) * petMult;
 
   for (const mat of materials) {
     const matSp  = catalog[mat.speciesId];
     const matRar = matSp?.rarity || 'common';
-    raw += base * (MAT_RARITY_MULT[matRar] || 1);
+    raw += MAT_FLAT_RATE[matRar] || 0.05;
   }
 
   raw += BOOST_BONUS[boostCard] || 0;
@@ -102,19 +97,17 @@ function enhance(pet, materials, useProtect, boostCard = 0) {
   const key = String(target);
 
   if (success) {
-    pet.enhanceLevel  = target;
+    pet.enhanceLevel   = target;
     pet.pityStack[key] = 0;
     return { success: true, newLevel: target, rate, roll };
   }
 
-  // Fail — increment pity for this target level
   pet.pityStack[key] = (pet.pityStack[key] || 0) + 1;
 
   if (useProtect) {
     return { success: false, newLevel: pet.enhanceLevel || 0, protected: true, rate, roll };
   }
 
-  // Level drop
   const dropRange = FAIL_DROP[target];
   if (!dropRange) {
     return { success: false, newLevel: pet.enhanceLevel || 0, protected: false, dropped: 0, rate, roll };
@@ -128,8 +121,8 @@ function enhance(pet, materials, useProtect, boostCard = 0) {
     ? clampedMin
     : clampedMin + Math.floor(Math.random() * (clampedMax - clampedMin + 1));
 
-  const dropped       = current - newLevel;
-  pet.enhanceLevel    = newLevel;
+  const dropped    = current - newLevel;
+  pet.enhanceLevel = newLevel;
   return { success: false, newLevel, dropped, protected: false, rate, roll };
 }
 
@@ -155,6 +148,6 @@ function enhanceLevelLabel(level) {
 module.exports = {
   calcRate, enhance,
   getEnhancePriceMult, getEnhanceCoinBonus, getMaxRate, enhanceLevelLabel,
-  BASE_RATE, COMP_RATE, PET_RARITY_MULT, MAT_RARITY_MULT, MAX_RATE,
+  BASE_RATE, COMP_RATE, PET_RARITY_MULT, MAT_FLAT_RATE, MAX_RATE,
   FAIL_DROP, ENHANCE_COIN_BONUS, ENHANCE_PRICE_MULT, BOOST_BONUS,
 };
