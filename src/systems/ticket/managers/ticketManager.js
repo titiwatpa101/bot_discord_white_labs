@@ -1,7 +1,8 @@
 const fs   = require('fs');
 const path = require('path');
 
-const CONFIG_PATH = path.join(__dirname, '../data/ticket_config.json');
+const DATA_DIR    = path.join(__dirname, '../data');
+const CONFIG_PATH = path.join(DATA_DIR, 'ticket_config.json');
 
 const DEFAULT_TOPICS = ['🐛 รายงานบัก', '💰 ปัญหาการชำระเงิน', '❓ สอบถามทั่วไป'];
 
@@ -11,6 +12,7 @@ function load() {
 }
 
 function save(data) {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(data, null, 2), 'utf8');
 }
 
