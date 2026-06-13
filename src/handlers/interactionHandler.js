@@ -1,9 +1,11 @@
-const rp         = require('../systems/rp/handler');
-const vc         = require('../systems/vc/handler');
-const uno        = require('../systems/uno/command');
-const verify     = require('../systems/verify/handler');
-const petHandler = require('../systems/pet/handler');
-const petAdmin   = require('../systems/pet/adminHandler');
+const rp           = require('../systems/rp/handler');
+const vc           = require('../systems/vc/handler');
+const uno          = require('../systems/uno/command');
+const verify       = require('../systems/verify/handler');
+const petHandler   = require('../systems/pet/handler');
+const petAdmin     = require('../systems/pet/adminHandler');
+const ticketAdmin  = require('../systems/ticket/adminHandler');
+const ticketHandler = require('../systems/ticket/handler');
 
 // ─── Main Interaction Router ──────────────────────────────────────────────────
 // เพิ่มระบบใหม่: import handler ด้านบน แล้วเพิ่ม prefix check ด้านล่าง
@@ -16,21 +18,26 @@ module.exports = async function interactionHandler(interaction) {
       if (interaction.commandName === 'uno')    return await uno.execute(interaction);
       if (interaction.commandName === 'verify') return await verify.handleCommand(interaction);
       if (interaction.commandName === 'pet')    return await petAdmin.handleCommand(interaction);
+      if (interaction.commandName === 'ticket') return await ticketAdmin.handleCommand(interaction);
     } else if (interaction.isButton()) {
       if (interaction.customId.startsWith('rp_'))     return await rp.handleButton(interaction);
       if (interaction.customId.startsWith('vc_'))     return await vc.handleButton(interaction);
       if (interaction.customId.startsWith('verify_')) return await verify.handleButton(interaction);
       if (interaction.customId.startsWith('pet_'))    return await petHandler.handleButton(interaction);
+      if (interaction.customId.startsWith('tk_'))     return await ticketHandler.handleButton(interaction);
     } else if (interaction.isStringSelectMenu()) {
       if (interaction.customId.startsWith('rp_'))     return await rp.handleSelect(interaction);
       if (interaction.customId.startsWith('vc_'))     return await vc.handleSelect(interaction);
-      if (interaction.customId.startsWith('petsel_')) return await petHandler.handleSelect(interaction);
+      if (interaction.customId.startsWith('petsel_'))   return await petHandler.handleSelect(interaction);
+      if (interaction.customId.startsWith('tksel_'))    return await ticketHandler.handleSelect(interaction);
     } else if (interaction.isUserSelectMenu()) {
-      if (interaction.customId.startsWith('vc_')) return await vc.handleUserSelect(interaction);
+      if (interaction.customId.startsWith('vc_'))       return await vc.handleUserSelect(interaction);
+      if (interaction.customId.startsWith('tkusr_'))    return await ticketHandler.handleUserSelect(interaction);
     } else if (interaction.isModalSubmit()) {
       if (interaction.customId.startsWith('rp_'))     return await rp.handleModal(interaction);
       if (interaction.customId.startsWith('vc_'))     return await vc.handleModal(interaction);
-      if (interaction.customId.startsWith('verify_')) return await verify.handleModal(interaction);
+      if (interaction.customId.startsWith('verify_'))  return await verify.handleModal(interaction);
+      if (interaction.customId.startsWith('tkmodal_')) return await ticketHandler.handleModal(interaction);
     }
   } catch (err) {
     console.error('Interaction error:', err);
