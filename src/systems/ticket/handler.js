@@ -16,6 +16,7 @@ async function handleButton(interaction) {
   if (id.startsWith('tk_create_'))  return handleCreate(interaction);
   if (id.startsWith('tk_claim_'))   return handleClaim(interaction);
   if (id.startsWith('tk_adduser_')) return handleAddUser(interaction);
+  if (id.startsWith('tk_rename_'))  return handleRename(interaction);
   if (id.startsWith('tk_close_'))   return handleClose(interaction);
 }
 
@@ -115,6 +116,7 @@ async function handleModal(interaction) {
   const id = interaction.customId;
   if (id.startsWith('tkmodal_detail_'))  return handleDetailModal(interaction);
   if (id.startsWith('tkmodal_custom_'))  return handleCustomModal(interaction);
+  if (id.startsWith('tkmodal_rename_'))  return handleRenameModal(interaction);
   if (id.startsWith('tkmodal_close_'))   return handleCloseModal(interaction);
 }
 
@@ -312,6 +314,49 @@ async function handleAddUser(interaction) {
   });
 }
 
+async function handleRename(interaction) {
+  const ticketChannelId = interaction.customId.replace('tk_rename_', '');
+
+  if (!isAdmin(interaction)) {
+    return interaction.reply({ content: '❌ เฉพาะ admin เท่านั้น', ephemeral: true });
+  }
+
+  const channel = interaction.guild.channels.cache.get(ticketChannelId);
+
+  await interaction.showModal(
+    new ModalBuilder()
+      .setCustomId(`tkmodal_rename_${ticketChannelId}`)
+      .setTitle('เปลี่ยนชื่อ Ticket')
+      .addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId('name')
+            .setLabel('ชื่อใหม่ (ใช้ - แทนเว้นวรรค)')
+            .setStyle(TextInputStyle.Short)
+            .setValue(channel?.name || '')
+            .setRequired(true)
+            .setMaxLength(100)
+        )
+      )
+  );
+}
+
+async function handleRenameModal(interaction) {
+  const ticketChannelId = interaction.customId.replace('tkmodal_rename_', '');
+  const rawName = interaction.fields.getTextInputValue('name');
+  const newName = rawName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9฀-๿-]/g, '');
+
+  const channel = interaction.guild.channels.cache.get(ticketChannelId);
+  if (!channel) return interaction.reply({ content: '❌ ไม่พบช่อง', ephemeral: true });
+
+  try {
+    await channel.setName(newName);
+    await interaction.reply({ content: `✅ เปลี่ยนชื่อเป็น **${newName}** แล้ว`, ephemeral: true });
+  } catch (err) {
+    await interaction.reply({ content: `❌ เปลี่ยนชื่อไม่ได้: \`${err.message}\``, ephemeral: true });
+  }
+}
+
 async function handleClose(interaction) {
   const ticketChannelId = interaction.customId.replace('tk_close_', '');
 
@@ -345,7 +390,7 @@ async function createTicketChannel(interaction, guildId, panelChannelId, topic, 
   const panel   = ticketManager.getPanel(guildId, panelChannelId);
   if (!panel) return interaction.followUp({ content: '❌ ไม่พบการตั้งค่า panel', ephemeral: true });
 
-  const counter  = ticketManager.nextCounter(guildId);
+  const counter  = ticketManager.peekCounter(guildId);  // ดูก่อน ยังไม่ save
   const topicIdx = isCustom ? 99 : (panel.topics || ticketManager.DEFAULT_TOPICS).indexOf(topic);
   const slug     = ticketManager.topicSlug(topic, topicIdx >= 0 ? topicIdx : 99);
   const chName   = `ticket-${slug}-${counter}`;
@@ -385,6 +430,9 @@ async function createTicketChannel(interaction, guildId, panelChannelId, topic, 
     console.error('[ticket] create channel error:', err);
     return interaction.followUp({ content: `❌ สร้างช่องไม่ได้: \`${err.message}\``, ephemeral: true });
   }
+
+  // commit counter หลังสร้างช่องสำเร็จ — ไม่เสียเลขถ้า error
+  ticketManager.commitCounter(guildId);
 
   const ticketData = {
     userId, topic, description,

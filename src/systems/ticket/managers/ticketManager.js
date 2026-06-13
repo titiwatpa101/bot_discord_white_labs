@@ -50,7 +50,14 @@ function getPanel(guildId, channelId) {
   return guild(guildId).panels?.[channelId] || null;
 }
 
-function nextCounter(guildId) {
+// peek = ดูตัวเลขถัดไปโดยไม่บันทึก (ใช้ตั้งชื่อช่องก่อนสร้างจริง)
+function peekCounter(guildId) {
+  const g = guild(guildId);
+  return String((g.counter || 0) + 1).padStart(4, '0');
+}
+
+// commit = บันทึกจริง เรียกหลังสร้างช่องสำเร็จเท่านั้น
+function commitCounter(guildId) {
   const data = load();
   const g = data[guildId] || {};
   g.counter = (g.counter || 0) + 1;
@@ -105,6 +112,7 @@ module.exports = {
   DEFAULT_TOPICS,
   load, save, guild,
   setGlobal, addPanel, removePanel, getPanel,
-  nextCounter, openTicket, getTicket, updateTicket, closeTicket,
+  peekCounter, commitCounter,
+  openTicket, getTicket, updateTicket, closeTicket,
   topicSlug,
 };

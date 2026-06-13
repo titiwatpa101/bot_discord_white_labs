@@ -27,8 +27,12 @@ function build(ticketChannelId, ticketData) {
       .setLabel('➕ Add User')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
+      .setCustomId(`tk_rename_${ticketChannelId}`)
+      .setLabel('✏️ Rename')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
       .setCustomId(`tk_close_${ticketChannelId}`)
-      .setLabel('🔒 Close Ticket')
+      .setLabel('🔒 Close')
       .setStyle(ButtonStyle.Danger),
   );
 
