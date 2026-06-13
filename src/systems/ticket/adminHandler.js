@@ -11,7 +11,7 @@ async function handleCommand(interaction) {
     const rolesStr   = interaction.options.getString('adminroles');
     const logChannel = interaction.options.getChannel('logchannel');
 
-    const adminRoles = [...(rolesStr?.matchAll(/<@&(\d+)>|(\d{17,20})/g) || [])]
+    const adminRoles  = [...(rolesStr?.matchAll(/<@&(\d+)>|(\d{17,20})/g) || [])]
       .map(m => m[1] || m[2])
       .filter(Boolean);
 
@@ -19,17 +19,25 @@ async function handleCommand(interaction) {
       return interaction.reply({ content: '❌ ระบุ admin role อย่างน้อย 1 ตัว เช่น @Admin', ephemeral: true });
     }
 
-    ticketManager.setGlobal(guildId, {
-      adminRoles,
-      logChannel: logChannel?.id,
-    });
+    const resetTimeRaw = interaction.options.getString('resettime');
+    let resetTime = null;
+    if (resetTimeRaw) {
+      if (!/^\d{2}:\d{2}$/.test(resetTimeRaw)) {
+        return interaction.reply({ content: '❌ รูปแบบเวลาต้องเป็น HH:MM เช่น 00:00 หรือ 06:30', ephemeral: true });
+      }
+      resetTime = resetTimeRaw;
+    }
+
+    ticketManager.setGlobal(guildId, { adminRoles, logChannel: logChannel?.id });
+    if (resetTimeRaw !== null) ticketManager.setResetTime(guildId, resetTime);
 
     await interaction.reply({
       embeds: [new EmbedBuilder()
         .setTitle('✅ ตั้งค่า Ticket Global สำเร็จ')
         .addFields(
-          { name: '👮 Admin Roles', value: adminRoles.map(r => `<@&${r}>`).join(' '), inline: true },
-          { name: '📋 Log Channel', value: logChannel ? `<#${logChannel.id}>` : 'ไม่ได้ตั้ง',  inline: true },
+          { name: '👮 Admin Roles',   value: adminRoles.map(r => `<@&${r}>`).join(' '),    inline: true },
+          { name: '📋 Log Channel',   value: logChannel ? `<#${logChannel.id}>` : 'ไม่ได้ตั้ง', inline: true },
+          { name: '🔄 Reset Counter', value: resetTime ? `ทุกวัน เวลา ${resetTime}` : 'ไม่ได้ตั้ง', inline: true },
         )
         .setColor(0x57f287)],
       ephemeral: true,
@@ -110,6 +118,17 @@ async function handleCommand(interaction) {
 
     ticketManager.removePanel(guildId, channel.id);
     await interaction.reply({ content: `✅ ลบ ticket panel ออกจาก ${channel} แล้ว`, ephemeral: true });
+    return;
+  }
+
+  // ─── /ticket reset ────────────────────────────────────────────────────────
+  if (sub === 'reset') {
+    ticketManager.resetCounter(guildId);
+    await interaction.reply({
+      content: '✅ Reset ticket counter เป็น 0001 แล้ว',
+      ephemeral: true,
+    });
+    return;
   }
 }
 

@@ -9,13 +9,22 @@ module.exports = {
     // /ticket global — ตั้งค่าส่วนกลาง (ทำครั้งเดียวต่อ server)
     .addSubcommand(s =>
       s.setName('global')
-        .setDescription('ตั้งค่าส่วนกลาง: admin role(s) และ log channel')
+        .setDescription('ตั้งค่าส่วนกลาง: admin role(s), log channel, reset time')
         .addStringOption(o =>
           o.setName('adminroles').setDescription('Role(s) ที่จัดการ ticket ได้ เช่น @Admin @Mod').setRequired(true)
         )
         .addChannelOption(o =>
           o.setName('logchannel').setDescription('Channel สำหรับ log การเปิด/ปิด ticket (optional)')
         )
+        .addStringOption(o =>
+          o.setName('resettime').setDescription('เวลา reset counter รายวัน เช่น 00:00 (HH:MM) ไม่ใส่ = ปิด')
+        )
+    )
+
+    // /ticket reset — reset counter ทันที
+    .addSubcommand(s =>
+      s.setName('reset')
+        .setDescription('Reset ticket counter เป็น 0001 ทันที')
     )
 
     // /ticket add — เพิ่ม panel ในช่องที่ต้องการ

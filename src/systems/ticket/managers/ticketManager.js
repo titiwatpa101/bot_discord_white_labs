@@ -95,6 +95,59 @@ function closeTicket(guildId, ticketChannelId) {
   save(data);
 }
 
+function resetCounter(guildId) {
+  const data = load();
+  const g = data[guildId] || {};
+  g.counter = 0;
+  data[guildId] = g;
+  save(data);
+}
+
+function setResetTime(guildId, time) {
+  const data = load();
+  const g = data[guildId] || {};
+  g.resetTime = time || null;
+  if (!time) delete g.lastResetDate; // clear tracking when disabled
+  data[guildId] = g;
+  save(data);
+}
+
+// เรียกครั้งเดียวตอน bot ready — เช็คทุก 1 นาที reset counter ถ้าถึงเวลา
+function startScheduler(client) {
+  setInterval(() => {
+    try {
+      const now   = new Date();
+      const hhmm  = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const today = now.toDateString();
+
+      const data = load();
+      let changed = false;
+
+      for (const [guildId, g] of Object.entries(data)) {
+        if (!g.resetTime || g.resetTime !== hhmm) continue;
+        if (g.lastResetDate === today) continue; // reset ไปแล้ววันนี้
+
+        g.counter       = 0;
+        g.lastResetDate = today;
+        changed         = true;
+        console.log(`[ticket] Counter reset for guild ${guildId} at ${hhmm}`);
+
+        if (g.logChannel && client) {
+          client.channels.cache.get(g.logChannel)
+            ?.send({ content: `🔄 Ticket counter reset แล้ว (${hhmm})` })
+            .catch(() => {});
+        }
+      }
+
+      if (changed) save(data);
+    } catch (err) {
+      console.error('[ticket] scheduler error:', err.message);
+    }
+  }, 60_000);
+
+  console.log('🎫 Ticket counter scheduler started');
+}
+
 // Generate Discord-safe slug from topic text (strips emoji + Thai chars)
 function topicSlug(topicText, index) {
   const noEmoji = topicText.replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}]/gu, '');
@@ -113,6 +166,7 @@ module.exports = {
   load, save, guild,
   setGlobal, addPanel, removePanel, getPanel,
   peekCounter, commitCounter,
+  resetCounter, setResetTime, startScheduler,
   openTicket, getTicket, updateTicket, closeTicket,
   topicSlug,
 };

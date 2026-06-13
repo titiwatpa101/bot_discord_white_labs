@@ -6,6 +6,7 @@ const vcVoiceHandler = require('./src/systems/vc/voiceStateHandler');
 const { onGuildMemberAdd, initNewbieSystem } = require('./src/systems/newbie/guildMemberHandler');
 const spawnManager    = require('./src/systems/pet/managers/spawnManager');
 const coinDropManager = require('./src/systems/pet/managers/coinDropManager');
+const ticketManager   = require('./src/systems/ticket/managers/ticketManager');
 
 // ─── Validate required env vars ───────────────────────────────────────────────
 const REQUIRED_ENV = ['DISCORD_TOKEN', 'CLIENT_ID'];
@@ -34,6 +35,7 @@ client.once('ready', async () => {
   await initNewbieSystem(client);
   spawnManager.initAllSpawns(client);
   coinDropManager.startCoinDrop(client);
+  ticketManager.startScheduler(client);
 });
 
 client.on('interactionCreate', interactionHandler);
