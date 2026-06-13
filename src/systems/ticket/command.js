@@ -9,9 +9,9 @@ module.exports = {
     // /ticket global — ตั้งค่าส่วนกลาง (ทำครั้งเดียวต่อ server)
     .addSubcommand(s =>
       s.setName('global')
-        .setDescription('ตั้งค่าส่วนกลาง: admin role และ log channel')
-        .addRoleOption(o =>
-          o.setName('adminrole').setDescription('Role ที่มีสิทธิ์ Claim / Close ticket').setRequired(true)
+        .setDescription('ตั้งค่าส่วนกลาง: admin role(s) และ log channel')
+        .addStringOption(o =>
+          o.setName('adminroles').setDescription('Role(s) ที่จัดการ ticket ได้ เช่น @Admin @Mod').setRequired(true)
         )
         .addChannelOption(o =>
           o.setName('logchannel').setDescription('Channel สำหรับ log การเปิด/ปิด ticket (optional)')

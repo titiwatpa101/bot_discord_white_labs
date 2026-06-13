@@ -352,16 +352,16 @@ async function createTicketChannel(interaction, guildId, panelChannelId, topic, 
 
   const { guild } = interaction;
   const userId     = interaction.user.id;
-  const adminRoleId = gConfig.adminRole;
-  const categoryId  = panel.category || null;   // category อยู่กับ panel
+  const adminRoles = gConfig.adminRoles || [];
+  const categoryId = panel.category || null;
 
   const permOverwrites = [
-    { id: guild.roles.everyone,   deny:  [PermissionFlagsBits.ViewChannel] },
-    { id: userId,                 allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
+    { id: guild.roles.everyone, deny:  [PermissionFlagsBits.ViewChannel] },
+    { id: userId,               allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
   ];
-  if (adminRoleId) {
+  for (const rId of adminRoles) {
     permOverwrites.push({
-      id: adminRoleId,
+      id:    rId,
       allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages],
     });
   }
@@ -439,11 +439,12 @@ async function createTicketChannel(interaction, guildId, panelChannelId, topic, 
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
 function isAdmin(interaction) {
-  const gConfig = ticketManager.guild(interaction.guildId);
-  if (!gConfig.adminRole) {
+  const gConfig    = ticketManager.guild(interaction.guildId);
+  const adminRoles = gConfig.adminRoles || [];
+  if (!adminRoles.length) {
     return interaction.member.permissions.has(PermissionFlagsBits.ManageGuild);
   }
-  return interaction.member.roles.cache.has(gConfig.adminRole);
+  return adminRoles.some(rId => interaction.member.roles.cache.has(rId));
 }
 
 module.exports = { handleButton, handleSelect, handleUserSelect, handleModal };

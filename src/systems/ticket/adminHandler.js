@@ -8,11 +8,19 @@ async function handleCommand(interaction) {
 
   // ─── /ticket global ───────────────────────────────────────────────────────
   if (sub === 'global') {
-    const adminRole  = interaction.options.getRole('adminrole');
+    const rolesStr   = interaction.options.getString('adminroles');
     const logChannel = interaction.options.getChannel('logchannel');
 
+    const adminRoles = [...(rolesStr?.matchAll(/<@&(\d+)>|(\d{17,20})/g) || [])]
+      .map(m => m[1] || m[2])
+      .filter(Boolean);
+
+    if (!adminRoles.length) {
+      return interaction.reply({ content: '❌ ระบุ admin role อย่างน้อย 1 ตัว เช่น @Admin', ephemeral: true });
+    }
+
     ticketManager.setGlobal(guildId, {
-      adminRole:  adminRole.id,
+      adminRoles,
       logChannel: logChannel?.id,
     });
 
@@ -20,8 +28,8 @@ async function handleCommand(interaction) {
       embeds: [new EmbedBuilder()
         .setTitle('✅ ตั้งค่า Ticket Global สำเร็จ')
         .addFields(
-          { name: '👮 Admin Role',  value: `<@&${adminRole.id}>`,          inline: true },
-          { name: '📋 Log Channel', value: logChannel ? `<#${logChannel.id}>` : 'ไม่ได้ตั้ง', inline: true },
+          { name: '👮 Admin Roles', value: adminRoles.map(r => `<@&${r}>`).join(' '), inline: true },
+          { name: '📋 Log Channel', value: logChannel ? `<#${logChannel.id}>` : 'ไม่ได้ตั้ง',  inline: true },
         )
         .setColor(0x57f287)],
       ephemeral: true,

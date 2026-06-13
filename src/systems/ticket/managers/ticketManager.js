@@ -20,10 +20,10 @@ function guild(guildId) {
   return load()[guildId] || {};
 }
 
-function setGlobal(guildId, { adminRole, logChannel }) {
+function setGlobal(guildId, { adminRoles, logChannel }) {
   const data = load();
   const g = data[guildId] || {};
-  if (adminRole  !== undefined) g.adminRole  = adminRole;
+  if (adminRoles !== undefined) g.adminRoles = adminRoles;
   if (logChannel !== undefined) g.logChannel = logChannel;
   data[guildId] = g;
   save(data);
