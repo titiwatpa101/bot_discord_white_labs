@@ -382,8 +382,8 @@ async function createTicketChannel(interaction, guildId, panelChannelId, topic, 
       permissionOverwrites,
     });
   } catch (err) {
-    console.error('[ticket] create channel error:', err.message);
-    return interaction.followUp({ content: '❌ ไม่สามารถสร้างช่อง ticket ได้ ตรวจสอบสิทธิ์ของ bot', ephemeral: true });
+    console.error('[ticket] create channel error:', err);
+    return interaction.followUp({ content: `❌ สร้างช่องไม่ได้: \`${err.message}\``, ephemeral: true });
   }
 
   const ticketData = {
