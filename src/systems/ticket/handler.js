@@ -379,7 +379,7 @@ async function createTicketChannel(interaction, guildId, panelChannelId, topic, 
       name:               chName,
       type:               ChannelType.GuildText,
       parent:             categoryId,
-      permissionOverwrites,
+      permissionOverwrites: permOverwrites,
     });
   } catch (err) {
     console.error('[ticket] create channel error:', err);
