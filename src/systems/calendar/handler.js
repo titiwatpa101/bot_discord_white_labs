@@ -14,6 +14,18 @@ const calendarPanel    = require('./panels/calendarPanel');
 // intermediate booking state: guildId_userId → { year, month, whoType, whoId, whoName }
 const bookingSessions = new Map();
 
+// ─── role guard ───────────────────────────────────────────────────────────────
+
+function isAllowed(interaction) {
+  const allowed = calendarManager.getAllowedRoles(interaction.guildId);
+  if (!allowed.length) return true; // ไม่ได้ตั้ง = ทุกคนใช้ได้
+  return allowed.some(rId => interaction.member.roles.cache.has(rId));
+}
+
+function denyReply(interaction) {
+  return interaction.reply({ content: '❌ คุณไม่มีสิทธิ์ใช้งาน calendar', ephemeral: true });
+}
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function parseYM(yyyymm) {
@@ -68,6 +80,7 @@ async function handleToday(interaction) {
 }
 
 async function handleOpenBook(interaction) {
+  if (!isAllowed(interaction)) return denyReply(interaction);
   const yyyymm = interaction.customId.replace('cal_openbook_', '');
 
   await interaction.reply({
@@ -117,6 +130,7 @@ async function handleBookType(interaction) {
 }
 
 async function handleBookList(interaction) {
+  if (!isAllowed(interaction)) return denyReply(interaction);
   const yyyymm = interaction.customId.replace('cal_booklist_', '');
   const { year, month } = parseYM(yyyymm);
   const bookings = calendarManager.getMonthBookings(interaction.guildId, year, month);
@@ -141,6 +155,7 @@ async function handleBookList(interaction) {
 }
 
 async function handleCancelList(interaction) {
+  if (!isAllowed(interaction)) return denyReply(interaction);
   const yyyymm = interaction.customId.replace('cal_cancellist_', '');
   const { year, month } = parseYM(yyyymm);
   const bookings = calendarManager.getMonthBookings(interaction.guildId, year, month);
@@ -292,13 +307,36 @@ function buildBookModal(yyyymm, year, month) {
 
 // ─── Setup command ────────────────────────────────────────────────────────────
 
+function parseRoleIds(str) {
+  if (!str) return [];
+  return [...(str.matchAll(/<@&(\d+)>|(\d{17,20})/g))]
+    .map(m => m[1] || m[2])
+    .filter(Boolean);
+}
+
 async function handleSetup(interaction) {
+  const sub = interaction.options.getSubcommand();
+
+  // ── /calendar roles ────────────────────────────────────────────────────────
+  if (sub === 'roles') {
+    const roleIds = parseRoleIds(interaction.options.getString('roles'));
+    calendarManager.setAllowedRoles(interaction.guildId, roleIds);
+    const desc = roleIds.length
+      ? roleIds.map(r => `<@&${r}>`).join(' ')
+      : 'ทุกคน (ไม่จำกัด role)';
+    return interaction.reply({ content: `✅ กำหนด role calendar: ${desc}`, ephemeral: true });
+  }
+
+  // ── /calendar setup ────────────────────────────────────────────────────────
   const channel = interaction.options.getChannel('channel');
+  const roleIds = parseRoleIds(interaction.options.getString('roles'));
   const now     = new Date();
   const year    = now.getFullYear();
   const month   = now.getMonth() + 1;
 
   await interaction.deferReply({ ephemeral: true });
+
+  if (roleIds.length) calendarManager.setAllowedRoles(interaction.guildId, roleIds);
 
   const payload = await buildPayload(interaction.guildId, year, month);
   const msg     = await channel.send(payload);
@@ -306,7 +344,11 @@ async function handleSetup(interaction) {
 
   calendarManager.setPanel(interaction.guildId, channel.id, msg.id);
 
-  await interaction.followUp({ content: `✅ ส่ง calendar panel ไปที่ ${channel} แล้ว`, ephemeral: true });
+  const roleDesc = roleIds.length ? roleIds.map(r => `<@&${r}>`).join(' ') : 'ทุกคน';
+  await interaction.followUp({
+    content: `✅ ส่ง calendar panel ไปที่ ${channel} แล้ว\n👥 Role ที่ใช้ได้: ${roleDesc}`,
+    ephemeral: true,
+  });
 }
 
 module.exports = {

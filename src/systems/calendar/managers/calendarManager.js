@@ -18,6 +18,18 @@ function guild(guildId) {
   return load()[guildId] || {};
 }
 
+function setAllowedRoles(guildId, roleIds) {
+  const data = load();
+  const g = data[guildId] || {};
+  g.allowedRoles = roleIds; // [] = ทุกคน
+  data[guildId] = g;
+  save(data);
+}
+
+function getAllowedRoles(guildId) {
+  return guild(guildId).allowedRoles || [];
+}
+
 function setPanel(guildId, channelId, messageId) {
   const data = load();
   const g = data[guildId] || {};
@@ -62,4 +74,4 @@ function getMonthBookings(guildId, year, month) {
   return result;
 }
 
-module.exports = { setPanel, getPanel, addBooking, removeBooking, getMonthBookings };
+module.exports = { setAllowedRoles, getAllowedRoles, setPanel, getPanel, addBooking, removeBooking, getMonthBookings };
