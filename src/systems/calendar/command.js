@@ -27,5 +27,16 @@ module.exports = {
     .addSubcommand(s =>
       s.setName('remove')
         .setDescription('ลบ calendar panel ออกจากช่อง')
+    )
+
+    .addSubcommand(s =>
+      s.setName('notify')
+        .setDescription('ตั้งช่องและเวลาแจ้งเตือนเมื่อถึงวันที่จอง')
+        .addChannelOption(o =>
+          o.setName('channel').setDescription('ช่องที่จะส่งแจ้งเตือน').setRequired(true)
+        )
+        .addStringOption(o =>
+          o.setName('time').setDescription('เวลาแจ้งเตือน เช่น 08:00 (default 08:00)')
+        )
     ),
 };

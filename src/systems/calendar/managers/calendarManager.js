@@ -82,4 +82,34 @@ function getMonthBookings(guildId, year, month) {
   return result;
 }
 
-module.exports = { setAllowedRoles, getAllowedRoles, setPanel, getPanel, removePanel, addBooking, removeBooking, getMonthBookings };
+function setNotifyConfig(guildId, channelId, time) {
+  const data = load();
+  const g = data[guildId] || {};
+  g.notifyConfig = { channelId, time };
+  data[guildId] = g;
+  save(data);
+}
+
+function getNotifyConfig(guildId) {
+  return guild(guildId).notifyConfig || null;
+}
+
+function removeAllBookingsForDate(guildId, dateStr) {
+  const data = load();
+  const g = data[guildId];
+  if (!g?.bookings?.[dateStr]) return;
+  delete g.bookings[dateStr];
+  save(data);
+}
+
+function getAllGuildIds() {
+  return Object.keys(load());
+}
+
+module.exports = {
+  setAllowedRoles, getAllowedRoles,
+  setPanel, getPanel, removePanel,
+  addBooking, removeBooking, getMonthBookings,
+  setNotifyConfig, getNotifyConfig,
+  removeAllBookingsForDate, getAllGuildIds,
+};

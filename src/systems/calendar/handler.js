@@ -62,6 +62,7 @@ async function handleButton(interaction) {
   if (id.startsWith('cal_booktype_'))   return handleBookType(interaction);
   if (id.startsWith('cal_booklist_'))   return handleBookList(interaction);
   if (id.startsWith('cal_cancellist_')) return handleCancelList(interaction);
+  if (id.startsWith('cal_ack_'))        return handleAck(interaction);
 }
 
 async function handleNav(interaction) {
@@ -151,6 +152,35 @@ async function handleBookList(interaction) {
       .setDescription(lines.length ? lines.join('\n') : 'ยังไม่มีการจองเดือนนี้')
       .setColor(0xe040fb)],
     ephemeral: true,
+  });
+}
+
+async function handleAck(interaction) {
+  if (!isAllowed(interaction)) return denyReply(interaction);
+
+  const dateStr = interaction.customId.replace('cal_ack_', '');
+  const guildId = interaction.guildId;
+
+  calendarManager.removeAllBookingsForDate(guildId, dateStr);
+
+  const [year, month] = dateStr.split('-').map(Number);
+  await refreshPanel(interaction.client, guildId, year, month);
+
+  const ackEmbed = EmbedBuilder.from(interaction.message.embeds[0])
+    .setColor(0x43b581)
+    .setFooter({ text: `${dateStr} • รับทราบโดย ${interaction.member.displayName}` });
+
+  await interaction.update({
+    embeds: [ackEmbed],
+    components: [
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`cal_ack_${dateStr}`)
+          .setLabel('✅ รับทราบแล้ว')
+          .setStyle(ButtonStyle.Success)
+          .setDisabled(true)
+      ),
+    ],
   });
 }
 
@@ -317,6 +347,17 @@ function parseRoleIds(str) {
 async function handleSetup(interaction) {
   const sub = interaction.options.getSubcommand();
 
+  // ── /calendar notify ───────────────────────────────────────────────────────
+  if (sub === 'notify') {
+    const channel = interaction.options.getChannel('channel');
+    const time    = interaction.options.getString('time') || '08:00';
+    if (!/^\d{2}:\d{2}$/.test(time)) {
+      return interaction.reply({ content: '❌ รูปแบบเวลาไม่ถูกต้อง ใช้ HH:MM เช่น 08:00', ephemeral: true });
+    }
+    calendarManager.setNotifyConfig(interaction.guildId, channel.id, time);
+    return interaction.reply({ content: `✅ ตั้งช่องแจ้งเตือนที่ ${channel} เวลา **${time}** แล้ว`, ephemeral: true });
+  }
+
   // ── /calendar remove ───────────────────────────────────────────────────────
   if (sub === 'remove') {
     const pd = calendarManager.getPanel(interaction.guildId);
@@ -366,6 +407,57 @@ async function handleSetup(interaction) {
   });
 }
 
+// ─── Scheduler ────────────────────────────────────────────────────────────────
+
+function buildNotifyPayload(dateStr, bookings) {
+  const lines = bookings.map(b => {
+    const who = b.whoType === 'role' ? `  <@&${b.whoId}>`
+      : b.whoType === 'user' ? `  <@${b.whoId}>` : '';
+    return `• **${b.topic}**${who}`;
+  });
+
+  const embed = new EmbedBuilder()
+    .setTitle('📅 มีการจองวันนี้')
+    .setDescription(lines.join('\n'))
+    .setColor(0xe040fb)
+    .setFooter({ text: dateStr });
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`cal_ack_${dateStr}`)
+      .setLabel('✅ รับทราบ')
+      .setStyle(ButtonStyle.Success)
+  );
+
+  return { embeds: [embed], components: [row] };
+}
+
+function startScheduler(client) {
+  setInterval(async () => {
+    const now   = new Date();
+    const hhmm  = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+    for (const guildId of calendarManager.getAllGuildIds()) {
+      const cfg = calendarManager.getNotifyConfig(guildId);
+      if (!cfg || cfg.time !== hhmm) continue;
+
+      const bookings = calendarManager.getMonthBookings(guildId, now.getFullYear(), now.getMonth()+1)[today];
+      if (!bookings?.length) continue;
+
+      try {
+        const ch = client.channels.cache.get(cfg.channelId)
+          || await client.channels.fetch(cfg.channelId).catch(() => null);
+        if (!ch) continue;
+
+        await ch.send(buildNotifyPayload(today, bookings));
+      } catch (err) {
+        console.error('[calendar] notify error:', err);
+      }
+    }
+  }, 60_000);
+}
+
 module.exports = {
   handleButton,
   handleRoleSelect,
@@ -373,4 +465,5 @@ module.exports = {
   handleCancelSelect,
   handleModal,
   handleSetup,
+  startScheduler,
 };
