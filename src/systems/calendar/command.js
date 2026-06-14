@@ -22,5 +22,10 @@ module.exports = {
         .addStringOption(o =>
           o.setName('roles').setDescription('Role(s) ที่ใช้ calendar ได้ เช่น @Member @VIP (ไม่ใส่ = ทุกคน)')
         )
+    )
+
+    .addSubcommand(s =>
+      s.setName('remove')
+        .setDescription('ลบ calendar panel ออกจากช่อง')
     ),
 };

@@ -317,6 +317,21 @@ function parseRoleIds(str) {
 async function handleSetup(interaction) {
   const sub = interaction.options.getSubcommand();
 
+  // ── /calendar remove ───────────────────────────────────────────────────────
+  if (sub === 'remove') {
+    const pd = calendarManager.getPanel(interaction.guildId);
+    if (!pd) return interaction.reply({ content: '❌ ไม่พบ calendar panel ในเซิร์ฟเวอร์นี้', ephemeral: true });
+
+    const ch = interaction.guild.channels.cache.get(pd.channelId);
+    if (ch) {
+      const msg = await ch.messages.fetch(pd.messageId).catch(() => null);
+      if (msg) await msg.delete().catch(() => {});
+    }
+
+    calendarManager.removePanel(interaction.guildId);
+    return interaction.reply({ content: '✅ ลบ calendar panel แล้ว', ephemeral: true });
+  }
+
   // ── /calendar roles ────────────────────────────────────────────────────────
   if (sub === 'roles') {
     const roleIds = parseRoleIds(interaction.options.getString('roles'));

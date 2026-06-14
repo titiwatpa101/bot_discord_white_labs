@@ -42,6 +42,14 @@ function getPanel(guildId) {
   return guild(guildId).panel || null;
 }
 
+function removePanel(guildId) {
+  const data = load();
+  const g = data[guildId];
+  if (!g) return;
+  delete g.panel;
+  save(data);
+}
+
 // booking = { topic, whoType:'role'|'user'|'none', whoId, whoName, createdBy }
 function addBooking(guildId, dateStr, booking) {
   const data = load();
@@ -74,4 +82,4 @@ function getMonthBookings(guildId, year, month) {
   return result;
 }
 
-module.exports = { setAllowedRoles, getAllowedRoles, setPanel, getPanel, addBooking, removeBooking, getMonthBookings };
+module.exports = { setAllowedRoles, getAllowedRoles, setPanel, getPanel, removePanel, addBooking, removeBooking, getMonthBookings };
