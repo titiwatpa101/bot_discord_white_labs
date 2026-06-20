@@ -1,4 +1,5 @@
 const RARITY_COLOR = {
+  mythic:    0xff4500,
   legendary: 0xf1c40f,
   epic:      0x9b59b6,
   rare:      0x3498db,
@@ -7,6 +8,7 @@ const RARITY_COLOR = {
 };
 
 const RARITY_LABEL = {
+  mythic:    '🔱 MYTHIC',
   legendary: '⭐ LEGENDARY',
   epic:      '💜 EPIC',
   rare:      '🔷 RARE',
@@ -15,6 +17,7 @@ const RARITY_LABEL = {
 };
 
 const RARITY_BADGE = {
+  mythic:    '🔱',
   legendary: '⭐',
   epic:      '💜',
   rare:      '🔷',

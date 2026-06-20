@@ -15,26 +15,25 @@ const COMP_RATE = {
 };
 
 const PET_RARITY_MULT = {
-  common: 1.5, uncommon: 1.2, rare: 1.0, epic: 0.8, legendary: 0.6,
+  common: 1.5, uncommon: 1.2, rare: 1.0, epic: 0.8, legendary: 0.6, mythic: 0.4,
 };
 
-// Flat rate added per material pet (not scaled by base rate)
 const MAT_FLAT_RATE = {
-  common: 0.05, uncommon: 0.10, rare: 0.20, epic: 0.40, legendary: 0.70,
+  common: 0.05, uncommon: 0.10, rare: 0.20, epic: 0.40, legendary: 0.70, mythic: 1.0,
 };
 
 // Max success rate cap by target level and pet rarity
 const MAX_RATE = {
-  1:  { common: 1.00, uncommon: 1.00, rare: 1.00, epic: 1.00, legendary: 1.00 },
-  2:  { common: 1.00, uncommon: 1.00, rare: 1.00, epic: 1.00, legendary: 1.00 },
-  3:  { common: 0.80, uncommon: 0.80, rare: 0.80, epic: 0.80, legendary: 0.80 },
-  4:  { common: 0.80, uncommon: 0.80, rare: 0.80, epic: 0.80, legendary: 0.80 },
-  5:  { common: 0.80, uncommon: 0.80, rare: 0.80, epic: 0.80, legendary: 0.80 },
-  6:  { common: 0.50, uncommon: 0.42, rare: 0.33, epic: 0.22, legendary: 0.12 },
-  7:  { common: 0.40, uncommon: 0.33, rare: 0.25, epic: 0.16, legendary: 0.09 },
-  8:  { common: 0.30, uncommon: 0.24, rare: 0.18, epic: 0.11, legendary: 0.06 },
-  9:  { common: 0.20, uncommon: 0.16, rare: 0.11, epic: 0.07, legendary: 0.04 },
-  10: { common: 0.12, uncommon: 0.09, rare: 0.07, epic: 0.04, legendary: 0.02 },
+  1:  { common: 1.00, uncommon: 1.00, rare: 1.00, epic: 1.00, legendary: 1.00, mythic: 1.00 },
+  2:  { common: 1.00, uncommon: 1.00, rare: 1.00, epic: 1.00, legendary: 1.00, mythic: 1.00 },
+  3:  { common: 0.80, uncommon: 0.80, rare: 0.80, epic: 0.80, legendary: 0.80, mythic: 0.70 },
+  4:  { common: 0.80, uncommon: 0.80, rare: 0.80, epic: 0.80, legendary: 0.80, mythic: 0.60 },
+  5:  { common: 0.80, uncommon: 0.80, rare: 0.80, epic: 0.80, legendary: 0.80, mythic: 0.50 },
+  6:  { common: 0.50, uncommon: 0.42, rare: 0.33, epic: 0.22, legendary: 0.12, mythic: 0.08 },
+  7:  { common: 0.40, uncommon: 0.33, rare: 0.25, epic: 0.16, legendary: 0.09, mythic: 0.05 },
+  8:  { common: 0.30, uncommon: 0.24, rare: 0.18, epic: 0.11, legendary: 0.06, mythic: 0.03 },
+  9:  { common: 0.20, uncommon: 0.16, rare: 0.11, epic: 0.07, legendary: 0.04, mythic: 0.02 },
+  10: { common: 0.12, uncommon: 0.09, rare: 0.07, epic: 0.04, legendary: 0.02, mythic: 0.01 },
 };
 
 const FAIL_DROP = {

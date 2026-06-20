@@ -3,6 +3,7 @@ const marketManager   = require('./managers/marketManager');
 const wtManager       = require('./managers/wonderTradeManager');
 const spawnManager    = require('./managers/spawnManager');
 const enhanceManager  = require('./managers/enhanceManager');
+const gachaManager    = require('./managers/gachaManager');
 const catalog         = require('./data/catalog.json');
 
 const mainPanel        = require('./panels/mainPanel');
@@ -18,13 +19,18 @@ const sellPanel        = require('./panels/sellPanel');
 const enhancePanel     = require('./panels/enhancePanel');
 const enhanceMatPanel  = require('./panels/enhanceMatPanel');
 const enhanceResultPanel = require('./panels/enhanceResultPanel');
+const gachaPanel       = require('./panels/gachaPanel');
+const gachaResultPanel = require('./panels/gachaResultPanel');
+const mythicFusionPanel = require('./panels/mythicFusionPanel');
 
 const { updateMarketPanel }      = require('./public/marketPublic');
 const { updateWonderTradePanel } = require('./public/wonderTradePublic');
 
-// ─── Enhance Sessions ─────────────────────────────────────────────────────────
-// key: `${guildId}_${userId}`  value: { targetInstId, materialInstIds[], protect, boost }
+const delay = ms => new Promise(r => setTimeout(r, ms));
+
+// ─── Sessions ─────────────────────────────────────────────────────────────────
 const enhanceSessions = new Map();
+const fusionSessions  = new Map();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -50,6 +56,7 @@ function getPanel(page, userId, guildId, user, extra) {
     case 'detail':   return petDetailPanel.build(userId, user, extra);
     case 'sell':     return sellPanel.build(userId, guildId, user, extra);
     case 'enhance':  return enhancePanel.build(userId, user);
+    case 'mythic':   return mythicFusionPanel.build(userId, user);
     default:         return mainPanel.build(userId, user);
   }
 }
@@ -373,6 +380,54 @@ async function handleAction(interaction, userId, guildId, action, extra) {
     return interaction.editReply(wonderTradePanel.build(userId, guildId, freshUser));
   }
 
+  // Mythic Fusion — execute
+  if (action === 'mythicgo') {
+    await interaction.deferUpdate();
+    const sessionKey = `${guildId}_${userId}`;
+    const session    = fusionSessions.get(sessionKey);
+    if (!session || session.instanceIds.length !== 5) {
+      return interaction.editReply(mythicFusionPanel.build(userId, petManager.getUser(guildId, userId)));
+    }
+
+    const user = petManager.getUser(guildId, userId);
+    const valid = session.instanceIds.every(id => {
+      const p = user.pets.find(pp => pp.instanceId === id);
+      return p && catalog[p.speciesId]?.rarity === 'legendary' && (p.enhanceLevel || 0) >= 8;
+    });
+
+    if (!valid) {
+      fusionSessions.delete(sessionKey);
+      const panel = mythicFusionPanel.build(userId, user);
+      panel.embeds[0].setFooter({ text: '❌ สัตว์ที่เลือกไม่ผ่านเงื่อนไขแล้ว' });
+      return interaction.editReply(panel);
+    }
+
+    for (const instId of session.instanceIds) {
+      petManager.removePet(guildId, userId, instId);
+    }
+    fusionSessions.delete(sessionKey);
+
+    const mythicPets = Object.entries(catalog).filter(([, sp]) => sp.rarity === 'mythic').map(([id]) => id);
+    const pickedId   = mythicPets[Math.floor(Math.random() * mythicPets.length)];
+    petManager.addPet(guildId, userId, pickedId);
+
+    await interaction.editReply({ embeds: [gachaResultPanel.frameSpinning()], components: [] });
+    await delay(1500);
+    await interaction.editReply({ embeds: [gachaResultPanel.frameRevealing()], components: [] });
+    await delay(1500);
+
+    const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+    const resultEmbed = mythicFusionPanel.buildResult(pickedId);
+    return interaction.editReply({
+      embeds: [resultEmbed],
+      components: [
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`pet_nav_${userId}_main`).setLabel('◀ กลับ').setStyle(ButtonStyle.Secondary)
+        ),
+      ],
+    });
+  }
+
   // Wonder Trade — withdraw
   if (action === 'withdraw') {
     await interaction.deferUpdate();
@@ -558,6 +613,24 @@ async function handleSelect(interaction) {
     return interaction.editReply(panel);
   }
 
+  // Mythic fusion pet selection → show confirm
+  if (id.startsWith('petsel_mythic_')) {
+    const userId = id.split('_')[2];
+    if (!checkOwner(interaction, userId)) return;
+    await interaction.deferUpdate();
+
+    const instanceIds = interaction.values;
+    const user        = petManager.getUser(guildId, userId);
+    const selectedPets = instanceIds.map(iid => user.pets.find(p => p.instanceId === iid)).filter(Boolean);
+
+    if (selectedPets.length !== 5) {
+      return interaction.editReply(mythicFusionPanel.build(userId, user));
+    }
+
+    fusionSessions.set(`${guildId}_${userId}`, { instanceIds });
+    return interaction.editReply(mythicFusionPanel.buildConfirm(userId, selectedPets));
+  }
+
   // Sell price selection
   if (id.startsWith('petsel_sellprice_')) {
     const userId = id.split('_')[2];
@@ -618,4 +691,57 @@ async function handleSpawnClaim(interaction) {
   });
 }
 
-module.exports = { handleButton, handleSelect };
+// ─── Gacha Button Handler ─────────────────────────────────────────────────────
+
+async function handleGachaButton(interaction) {
+  const id      = interaction.customId;
+  const guildId = interaction.guildId;
+
+  const parts  = id.split('_');
+  const action = parts[1]; // pull1 or pull11
+  const userId = parts[2];
+
+  if (!checkOwner(interaction, userId)) return;
+
+  const count = action === 'pull11' ? 11 : 1;
+  const result = gachaManager.pull(guildId, userId, count);
+
+  if (!result.success) {
+    await interaction.deferUpdate();
+    const user  = petManager.getUser(guildId, userId);
+    const panel = gachaPanel.build(userId, user);
+    panel.embeds[0].setFooter({ text: `❌ เงินไม่พอ — ต้องการ ${result.need.toLocaleString()} coins (มี ${result.have.toLocaleString()})` });
+    return interaction.editReply(panel);
+  }
+
+  await interaction.deferUpdate();
+
+  // Animation frame 1
+  await interaction.editReply({ embeds: [gachaResultPanel.frameSpinning()], components: [] });
+  await delay(1500);
+
+  // Animation frame 2
+  await interaction.editReply({ embeds: [gachaResultPanel.frameRevealing()], components: [] });
+  await delay(1500);
+
+  // Final result
+  const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+  const resultEmbed = count === 1
+    ? gachaResultPanel.buildSingle(result.results[0].speciesId)
+    : gachaResultPanel.buildMulti(result.results);
+
+  const user  = petManager.getUser(guildId, userId);
+  const panel = gachaPanel.build(userId, user);
+
+  return interaction.editReply({
+    embeds: [resultEmbed],
+    components: [
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`gc_pull1_${userId}`).setLabel(`🎲 สุ่มอีก 1 ตัว`).setStyle(ButtonStyle.Primary).setDisabled((user.coins || 0) < gachaManager.PULL_1_COST),
+        new ButtonBuilder().setCustomId(`gc_pull11_${userId}`).setLabel(`🎲 สุ่มอีก 11 ตัว`).setStyle(ButtonStyle.Success).setDisabled((user.coins || 0) < gachaManager.PULL_11_COST),
+      ),
+    ],
+  });
+}
+
+module.exports = { handleButton, handleSelect, handleGachaButton };

@@ -107,5 +107,13 @@
   "bat_cave":          { "name": "ค้างคาวถ้ำ",             "type": "bat",       "emoji": "🦇", "rarity": "common",    "spawnWeight": 4.0, "basePrice": 70,   "elasticity": 0.87,"baseVolatility": 0.067, "expReward": 3,  "imageUrl": null },
   "caterpillar_leaf":  { "name": "หนอนใบไม้",              "type": "insect",    "emoji": "🐛", "rarity": "common",    "spawnWeight": 4.0, "basePrice": 55,   "elasticity": 0.90,"baseVolatility": 0.070, "expReward": 3,  "imageUrl": null },
   "duckling_pond":     { "name": "ลูกเป็ดสระ",             "type": "bird",      "emoji": "🐥", "rarity": "common",    "spawnWeight": 4.0, "basePrice": 65,   "elasticity": 0.88,"baseVolatility": 0.068, "expReward": 3,  "imageUrl": null },
-  "gecko_wall":        { "name": "ตุ๊กแกกำแพง",            "type": "reptile",   "emoji": "🦎", "rarity": "common",    "spawnWeight": 4.0, "basePrice": 60,   "elasticity": 0.89,"baseVolatility": 0.069, "expReward": 3,  "imageUrl": null }
+  "gecko_wall":        { "name": "ตุ๊กแกกำแพง",            "type": "reptile",   "emoji": "🦎", "rarity": "common",    "spawnWeight": 4.0, "basePrice": 60,   "elasticity": 0.89,"baseVolatility": 0.069, "expReward": 3,  "imageUrl": null },
+
+  "kitsune_nine":      { "name": "คิทซึเนะเก้าหาง",       "type": "mythical",  "emoji": "🦊", "rarity": "legendary", "spawnWeight": 0, "basePrice": 7000, "elasticity": 0.25,"baseVolatility": 0.010, "expReward": 40, "imageUrl": null, "gachaExclusive": true },
+  "bahamut_chaos":     { "name": "บาฮามุทแห่งความโกลาหล",  "type": "dragon",    "emoji": "🐉", "rarity": "legendary", "spawnWeight": 0, "basePrice": 7500, "elasticity": 0.22,"baseVolatility": 0.008, "expReward": 45, "imageUrl": null, "gachaExclusive": true },
+  "fenrir_chain":      { "name": "เฟนริร์โซ่ตรวน",         "type": "wolf",      "emoji": "⛓️", "rarity": "legendary", "spawnWeight": 0, "basePrice": 7200, "elasticity": 0.24,"baseVolatility": 0.009, "expReward": 42, "imageUrl": null, "gachaExclusive": true },
+
+  "odin_allfather":    { "name": "โอดินผู้สร้าง",          "type": "mythical",  "emoji": "👁️", "rarity": "mythic",    "spawnWeight": 0, "basePrice": 15000,"elasticity": 0.15,"baseVolatility": 0.005, "expReward": 60, "imageUrl": null },
+  "amaterasu_sun":     { "name": "อะมะเทระสุเทพสุริยะ",    "type": "mythical",  "emoji": "☀️", "rarity": "mythic",    "spawnWeight": 0, "basePrice": 15000,"elasticity": 0.15,"baseVolatility": 0.005, "expReward": 60, "imageUrl": null },
+  "chronos_time":      { "name": "โครนอสผู้ควบคุมเวลา",    "type": "mythical",  "emoji": "⏳", "rarity": "mythic",    "spawnWeight": 0, "basePrice": 15000,"elasticity": 0.15,"baseVolatility": 0.005, "expReward": 60, "imageUrl": null }
 }

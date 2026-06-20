@@ -26,6 +26,7 @@ module.exports = async function interactionHandler(interaction) {
       if (interaction.customId.startsWith('vc_'))     return await vc.handleButton(interaction);
       if (interaction.customId.startsWith('verify_')) return await verify.handleButton(interaction);
       if (interaction.customId.startsWith('pet_'))    return await petHandler.handleButton(interaction);
+      if (interaction.customId.startsWith('gc_'))      return await petHandler.handleGachaButton(interaction);
       if (interaction.customId.startsWith('tk_'))      return await ticketHandler.handleButton(interaction);
       if (interaction.customId.startsWith('cal_'))     return await calHandler.handleButton(interaction);
     } else if (interaction.isStringSelectMenu()) {

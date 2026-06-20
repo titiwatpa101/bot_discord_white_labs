@@ -44,7 +44,16 @@ function build(userId, user) {
     new ButtonBuilder().setCustomId(`pet_nav_${uid}_enhance`).setLabel('⚔️ ตีบวก').setStyle(ButtonStyle.Danger).setDisabled(!active),
   );
 
-  return { embeds: [embed], components: [row1, row2] };
+  const hasLeg8 = user.pets.some(p => {
+    const s = catalog[p.speciesId];
+    return s?.rarity === 'legendary' && (p.enhanceLevel || 0) >= 8;
+  });
+
+  const row3 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`pet_nav_${uid}_mythic`).setLabel('🔱 Mythic Fusion').setStyle(ButtonStyle.Danger).setDisabled(!hasLeg8),
+  );
+
+  return { embeds: [embed], components: [row1, row2, row3] };
 }
 
 module.exports = { build };
