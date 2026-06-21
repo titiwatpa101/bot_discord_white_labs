@@ -1,63 +1,81 @@
 const { EmbedBuilder } = require('discord.js');
-const { RARITY_LABEL, RARITY_COLOR } = require('./constants');
+const { RARITY_LABEL, RARITY_COLOR, RARITY_BADGE } = require('./constants');
 const catalog = require('../data/catalog.json');
 
-const SPIN_EMOJIS = ['🐱', '🐺', '🦊', '🐉', '✨', '🐲', '🦅', '🐍', '🦁', '🐻'];
+const SPIN_FRAMES = [
+  ['🐱', '🐺', '🦊', '🐉', '✨', '🐲'],
+  ['🦅', '🐍', '🦁', '🐻', '💎', '🔥'],
+  ['⚡', '🌙', '🗿', '🌌', '🦑', '⛓️'],
+];
 
 function frameSpinning() {
-  const shuffled = [...SPIN_EMOJIS].sort(() => Math.random() - 0.5).slice(0, 6);
+  const frame = SPIN_FRAMES[Math.floor(Math.random() * SPIN_FRAMES.length)];
+  const shuffled = [...frame].sort(() => Math.random() - 0.5);
   return new EmbedBuilder()
     .setTitle('🎰 กำลังสุ่ม...')
-    .setDescription(shuffled.join('  '))
+    .setDescription(`\n${shuffled.join('  →  ')}\n`)
     .setColor(0xff6b35);
 }
 
 function frameRevealing() {
   return new EmbedBuilder()
-    .setTitle('🎰 เปิดผล...')
-    .setDescription('✨ ✨ ✨')
+    .setTitle('✨ เปิดผล... ✨')
+    .setDescription('\n⬇️  ⬇️  ⬇️\n')
     .setColor(0xfee75c);
 }
 
 function buildSingle(speciesId) {
   const sp = catalog[speciesId];
   const rarity = sp?.rarity || 'common';
-  const label  = RARITY_LABEL[rarity] || rarity;
   const color  = RARITY_COLOR[rarity] || 0x5865f2;
 
   const embed = new EmbedBuilder()
     .setTitle('🎰 ผลการสุ่ม!')
-    .setDescription(`${sp?.emoji || '🐾'} **${sp?.name || speciesId}**\n${label}`)
+    .setDescription(
+      `\n${sp?.emoji || '🐾'} **${sp?.name || speciesId}**\n` +
+      `${RARITY_LABEL[rarity]}\n`
+    )
     .setColor(color);
 
   if (sp?.imageUrl) embed.setThumbnail(sp.imageUrl);
+  if (rarity === 'legendary' || rarity === 'mythic') {
+    embed.setFooter({ text: '🎉 ยินดีด้วย! ได้สัตว์หายาก!' });
+  }
 
   return embed;
 }
 
 function buildMulti(results) {
   const lines = results.map((r, i) => {
-    const sp = catalog[r.speciesId];
-    const label = RARITY_LABEL[sp?.rarity] || '';
-    return `${i + 1}. ${sp?.emoji || '🐾'} **${sp?.name || r.speciesId}**  ${label}`;
+    const sp    = catalog[r.speciesId];
+    const badge = RARITY_BADGE[sp?.rarity] || '⚪';
+    return `\`${String(i + 1).padStart(2)}\`  ${badge} ${sp?.emoji || '🐾'} **${sp?.name || r.speciesId}**`;
   });
 
   const bestRarity = getBestRarity(results);
   const color = RARITY_COLOR[bestRarity] || 0xff6b35;
 
-  return new EmbedBuilder()
-    .setTitle('🎰 ผลการสุ่ม 11 ตัว!')
+  const embed = new EmbedBuilder()
+    .setTitle('🎰 ผลการสุ่ม ×11!')
     .setDescription(lines.join('\n'))
     .setColor(color);
+
+  const rareCount = results.filter(r => {
+    const sp = catalog[r.speciesId];
+    return ['epic', 'legendary', 'mythic'].includes(sp?.rarity);
+  }).length;
+
+  if (rareCount > 0) {
+    embed.setFooter({ text: `🎉 ได้สัตว์ระดับ Epic ขึ้นไป ${rareCount} ตัว!` });
+  }
+
+  return embed;
 }
 
 function getBestRarity(results) {
   const order = ['mythic', 'legendary', 'epic', 'rare', 'uncommon', 'common'];
   for (const r of order) {
-    if (results.some(res => {
-      const sp = catalog[res.speciesId];
-      return sp?.rarity === r || (sp?.gachaExclusive && r === 'legendary');
-    })) return r;
+    if (results.some(res => catalog[res.speciesId]?.rarity === r)) return r;
   }
   return 'common';
 }

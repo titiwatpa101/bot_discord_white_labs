@@ -1,6 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
-const { RARITY_LABEL, RARITY_COLOR } = require('./constants');
-const { enhanceLevelLabel }           = require('../managers/enhanceManager');
+const { RARITY_LABEL, RARITY_COLOR, RARITY_BADGE } = require('./constants');
+const { enhanceLevelLabel } = require('../managers/enhanceManager');
 const catalog = require('../data/catalog.json');
 
 function build(userId, user) {
@@ -9,20 +9,10 @@ function build(userId, user) {
 
   const embed = new EmbedBuilder()
     .setTitle('⚔️ ระบบตีบวก')
-    .setDescription(
-      pets.length === 0
-        ? '❌ ไม่มีสัตว์ในคลัง'
-        : 'เลือกสัตว์ที่ต้องการตีบวก:\n\n' +
-          pets.slice(0, 10).map((p, i) => {
-            const sp  = catalog[p.speciesId];
-            const lbl = RARITY_LABEL[sp?.rarity] || '';
-            const enh = p.enhanceLevel > 0 ? ` **+${p.enhanceLevel}**` : '';
-            return `${i + 1}. ${sp?.emoji || '🐾'} **${sp?.name || p.speciesId}**${enh}  ${lbl}  Lv.${p.level}`;
-          }).join('\n')
-    )
     .setColor(0xfee75c);
 
   if (pets.length === 0) {
+    embed.setDescription('❌ ไม่มีสัตว์ในคลัง');
     return {
       embeds: [embed],
       components: [new ActionRowBuilder().addComponents(
@@ -31,13 +21,25 @@ function build(userId, user) {
     };
   }
 
+  const lines = pets.slice(0, 12).map((p, i) => {
+    const sp    = catalog[p.speciesId];
+    const badge = RARITY_BADGE[sp?.rarity] || '⚪';
+    const enh   = enhanceLevelLabel(p.enhanceLevel);
+    return `${badge} ${sp?.emoji || '🐾'} **${sp?.name || p.speciesId}**${enh}  Lv.${p.level}`;
+  });
+
+  if (pets.length > 12) lines.push(`*... อีก ${pets.length - 12} ตัว*`);
+
+  embed.setDescription('เลือกสัตว์ที่ต้องการตีบวก:\n\n' + lines.join('\n'));
+
   const options = pets.slice(0, 25).map(p => {
     const sp  = catalog[p.speciesId];
     const enh = p.enhanceLevel > 0 ? ` +${p.enhanceLevel}` : ' +0';
     return {
-      label:       `${sp?.emoji || ''} ${sp?.name || p.speciesId}${enh}`,
-      description: `${RARITY_LABEL[sp?.rarity] || ''}  Lv.${p.level}  Pity: ${Object.values(p.pityStack || {}).reduce((a, b) => a + b, 0)}`,
+      label:       `${sp?.name || p.speciesId}${enh}  Lv.${p.level}`,
+      description: `${RARITY_LABEL[sp?.rarity] || ''}  •  Pity: ${Object.values(p.pityStack || {}).reduce((a, b) => a + b, 0)}`,
       value:       p.instanceId,
+      emoji:       sp?.emoji || '🐾',
     };
   });
 

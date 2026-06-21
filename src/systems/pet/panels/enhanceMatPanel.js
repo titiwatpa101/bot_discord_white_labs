@@ -3,7 +3,8 @@ const { RARITY_LABEL, RARITY_COLOR } = require('./constants');
 const { calcRate, getMaxRate, BASE_RATE, COMP_RATE, PET_RARITY_MULT, BOOST_BONUS, MAT_FLAT_RATE } = require('../managers/enhanceManager');
 const catalog = require('../data/catalog.json');
 
-const RARITY_EMOJI = { common: '⚪', uncommon: '🟢', rare: '🔷', epic: '💜', legendary: '⭐' };
+const RARITY_EMOJI = { mythic: '🔱', common: '⚪', uncommon: '🟢', rare: '🔷', epic: '💜', legendary: '⭐' };
+const MYTHIC_MAT_TIERS = new Set(['epic', 'legendary', 'mythic']);
 const BOOST_LABELS = ['—', '⬆️S (+10%)', '⬆️M (+20%)'];
 const NEXT_BOOST   = [1, 2, 0];
 
@@ -88,7 +89,15 @@ function build(userId, user, session) {
   if (sp?.imageUrl) embed.setThumbnail(sp.imageUrl);
 
   // Row 1: multi-select material dropdown
-  const available = user.pets.filter(p => p.instanceId !== targetInstId);
+  const isMythicTarget = petRarity === 'mythic';
+  const available = user.pets.filter(p => {
+    if (p.instanceId === targetInstId) return false;
+    if (isMythicTarget) {
+      const mr = catalog[p.speciesId]?.rarity || 'common';
+      return MYTHIC_MAT_TIERS.has(mr);
+    }
+    return true;
+  });
   const options   = available.slice(0, 25).map(p => {
     const ms  = catalog[p.speciesId];
     const enh = p.enhanceLevel > 0 ? ` +${p.enhanceLevel}` : '';

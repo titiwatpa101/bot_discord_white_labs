@@ -45,7 +45,7 @@ function checkOwner(interaction, userId) {
 function getPanel(page, userId, guildId, user, extra) {
   switch (page) {
     case 'main':     return mainPanel.build(userId, user);
-    case 'pets':     return petsPanel.build(userId, user);
+    case 'pets':     return petsPanel.build(userId, user, extra);
     case 'shop':     return shopPanel.build(userId, user);
     case 'shopqty':  return shopQtyPanel.build(userId, guildId, user, extra);
     case 'market':   return marketPanel.build(userId, guildId, user);

@@ -1,16 +1,16 @@
 const catalog    = require('../data/catalog.json');
 const petManager = require('./petManager');
 
-const PULL_1_COST  = 1000;
-const PULL_11_COST = 10000;
+const PULL_1_COST  = 5000;
+const PULL_11_COST = 50000;
 
 const RARITY_RATE = [
-  { rarity: 'common',    weight: 50   },
-  { rarity: 'uncommon',  weight: 25   },
-  { rarity: 'rare',      weight: 15   },
-  { rarity: 'epic',      weight: 7    },
-  { rarity: 'legendary', weight: 2.5  },
-  { rarity: 'gacha_leg', weight: 0.5  },
+  { rarity: 'common',    weight: 52    },
+  { rarity: 'uncommon',  weight: 27    },
+  { rarity: 'rare',      weight: 13    },
+  { rarity: 'epic',      weight: 7.625 },
+  { rarity: 'legendary', weight: 0.25  },
+  { rarity: 'gacha_leg', weight: 0.125 },
 ];
 
 const TOTAL_WEIGHT = RARITY_RATE.reduce((s, r) => s + r.weight, 0);
