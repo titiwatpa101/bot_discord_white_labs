@@ -61,7 +61,10 @@ function build(userId, user) {
     return s?.rarity === 'legendary' && (p.enhanceLevel || 0) >= 8;
   });
 
+  const canMerge = user.pets.length >= 10;
+
   const row3 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`pet_nav_${uid}_merge`).setLabel('🔄 รวมสัตว์').setStyle(ButtonStyle.Primary).setDisabled(!canMerge),
     new ButtonBuilder().setCustomId(`pet_nav_${uid}_mythic`).setLabel('🔱 Mythic Fusion').setStyle(ButtonStyle.Danger).setDisabled(!hasLeg8),
   );
 

@@ -53,6 +53,7 @@ function getUser(guildId, userId) {
   for (const itemId of Object.keys(ITEM_CATALOG)) {
     if (data[k].items[itemId] === undefined) { data[k].items[itemId] = 0; dirty = true; }
   }
+  if (data[k].gachaPity === undefined) { data[k].gachaPity = 0; dirty = true; }
   // Backfill enhanceLevel + pityStack on existing pets
   for (const pet of data[k].pets) {
     if (pet.enhanceLevel === undefined) { pet.enhanceLevel = 0; dirty = true; }

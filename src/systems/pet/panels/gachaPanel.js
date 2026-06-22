@@ -1,8 +1,15 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { PULL_1_COST, PULL_11_COST } = require('../managers/gachaManager');
+const { PULL_1_COST, PULL_11_COST, PITY_LIMIT } = require('../managers/gachaManager');
+
+function pityBar(pity, width = 20) {
+  const filled  = Math.round((pity / PITY_LIMIT) * width);
+  const clamped = Math.min(width, Math.max(0, filled));
+  return '█'.repeat(clamped) + '░'.repeat(width - clamped);
+}
 
 function build(userId, user) {
   const coins = user.coins || 0;
+  const pity  = user.gachaPity || 0;
 
   const embed = new EmbedBuilder()
     .setTitle('🎰 Gacha — สุ่มสัตว์เลี้ยง')
@@ -19,10 +26,13 @@ function build(userId, user) {
       '│ ⭐ Legendary  │  0.25%    │\n' +
       '│ ✨ Exclusive  │  0.125%   │\n' +
       '└──────────────┴───────────┘\n' +
-      '```\n' +
-      `💰 **${coins.toLocaleString()}** coins`
+      '```'
     )
-    .setFooter({ text: 'Gacha-Exclusive Legendary ได้จากที่นี่เท่านั้น!' });
+    .addFields(
+      { name: '💰 เงิน', value: `**${coins.toLocaleString()}** coins`, inline: true },
+      { name: `🎯 Pity — ${pity}/${PITY_LIMIT}`, value: `\`${pityBar(pity)}\`\n${PITY_LIMIT - pity} ครั้งถึงการันตี ⭐`, inline: false },
+    )
+    .setFooter({ text: '200 ครั้งไม่ได้ Legendary = การันตี 1 ตัว!' });
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()

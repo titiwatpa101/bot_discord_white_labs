@@ -22,6 +22,7 @@ const enhanceResultPanel = require('./panels/enhanceResultPanel');
 const gachaPanel       = require('./panels/gachaPanel');
 const gachaResultPanel = require('./panels/gachaResultPanel');
 const mythicFusionPanel = require('./panels/mythicFusionPanel');
+const mergePanel       = require('./panels/mergePanel');
 
 const { updateMarketPanel }      = require('./public/marketPublic');
 const { updateWonderTradePanel } = require('./public/wonderTradePublic');
@@ -31,6 +32,7 @@ const delay = ms => new Promise(r => setTimeout(r, ms));
 // ─── Sessions ─────────────────────────────────────────────────────────────────
 const enhanceSessions = new Map();
 const fusionSessions  = new Map();
+const mergeSessions   = new Map();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -57,6 +59,7 @@ function getPanel(page, userId, guildId, user, extra) {
     case 'sell':     return sellPanel.build(userId, guildId, user, extra);
     case 'enhance':  return enhancePanel.build(userId, user);
     case 'mythic':   return mythicFusionPanel.build(userId, user);
+    case 'merge':    return mergePanel.build(userId, user, extra);
     default:         return mainPanel.build(userId, user);
   }
 }
@@ -221,6 +224,62 @@ async function handleAction(interaction, userId, guildId, action, extra) {
     const panel = shopQtyPanel.build(userId, guildId, fresh, foodId);
     panel.embeds[0].setFooter({ text: `✅ ซื้อ ${food.name} × ${qty} สำเร็จ! (-${cost.toLocaleString()} coins)` });
     return interaction.editReply(panel);
+  }
+
+  // Enhance: rarity filter for materials
+  if (action === 'efilter') {
+    await interaction.deferUpdate();
+    const sessionKey = `${guildId}_${userId}`;
+    const session    = enhanceSessions.get(sessionKey);
+    if (!session) return interaction.editReply(enhancePanel.build(userId, petManager.getUser(guildId, userId)));
+    session.matFilter = extra === 'all' ? null : extra;
+    const user = petManager.getUser(guildId, userId);
+    return interaction.editReply(enhanceMatPanel.build(userId, user, session));
+  }
+
+  // Merge: execute
+  if (action === 'domerge') {
+    await interaction.deferUpdate();
+    const sessionKey = `${guildId}_${userId}`;
+    const session    = mergeSessions.get(sessionKey);
+    if (!session || session.instanceIds.length !== mergePanel.MERGE_COUNT) {
+      return interaction.editReply(mergePanel.build(userId, petManager.getUser(guildId, userId)));
+    }
+
+    const user  = petManager.getUser(guildId, userId);
+    const valid = session.instanceIds.every(id => {
+      const p = user.pets.find(pp => pp.instanceId === id);
+      return p && (catalog[p.speciesId]?.rarity || 'common') === session.rarity;
+    });
+
+    if (!valid) {
+      mergeSessions.delete(sessionKey);
+      return interaction.editReply(mergePanel.build(userId, user));
+    }
+
+    for (const instId of session.instanceIds) {
+      petManager.removePet(guildId, userId, instId);
+    }
+    mergeSessions.delete(sessionKey);
+
+    const nextRarity = mergePanel.NEXT_TIER[session.rarity];
+    const pool = Object.entries(catalog)
+      .filter(([, sp]) => sp.rarity === nextRarity && sp.spawnWeight > 0)
+      .map(([id]) => id);
+    const pickedId = pool[Math.floor(Math.random() * pool.length)];
+    petManager.addPet(guildId, userId, pickedId);
+
+    const { ActionRowBuilder: AR, ButtonBuilder: BB, ButtonStyle: BS } = require('discord.js');
+    const resultEmbed = mergePanel.buildResult(pickedId);
+    return interaction.editReply({
+      embeds: [resultEmbed],
+      components: [
+        new AR().addComponents(
+          new BB().setCustomId(`pet_nav_${userId}_merge`).setLabel('🔄 รวมอีก').setStyle(BS.Primary),
+          new BB().setCustomId(`pet_nav_${userId}_main`).setLabel('◀ กลับหลัก').setStyle(BS.Secondary),
+        ),
+      ],
+    });
   }
 
   // Enhance: toggle protect
@@ -487,7 +546,7 @@ async function handleSelect(interaction) {
     const userId = id.split('_')[2];
     if (!checkOwner(interaction, userId)) return;
     await interaction.deferUpdate();
-    const session = { targetInstId: value, materialInstIds: [], protect: false, boost: 0 };
+    const session = { targetInstId: value, materialInstIds: [], protect: false, boost: 0, matFilter: null };
     enhanceSessions.set(`${guildId}_${userId}`, session);
     const user = petManager.getUser(guildId, userId);
     return interaction.editReply(enhanceMatPanel.build(userId, user, session));
@@ -611,6 +670,25 @@ async function handleSelect(interaction) {
     const panel     = wonderTradePanel.build(userId, guildId, freshUser);
     panel.embeds[0].setFooter({ text: '⏳ สัตว์อยู่ในพูลแล้ว — รอให้มีคนมาแลก' });
     return interaction.editReply(panel);
+  }
+
+  // Merge pet selection → show confirm
+  if (id.startsWith('petsel_merge_')) {
+    const userId = id.split('_')[2];
+    if (!checkOwner(interaction, userId)) return;
+    await interaction.deferUpdate();
+
+    const instanceIds = interaction.values;
+    const user        = petManager.getUser(guildId, userId);
+    const selectedPets = instanceIds.map(iid => user.pets.find(p => p.instanceId === iid)).filter(Boolean);
+
+    if (selectedPets.length !== mergePanel.MERGE_COUNT) {
+      return interaction.editReply(mergePanel.build(userId, user));
+    }
+
+    const rarity = catalog[selectedPets[0].speciesId]?.rarity || 'common';
+    mergeSessions.set(`${guildId}_${userId}`, { rarity, instanceIds });
+    return interaction.editReply(mergePanel.buildConfirm(userId, selectedPets, rarity));
   }
 
   // Mythic fusion pet selection → show confirm
