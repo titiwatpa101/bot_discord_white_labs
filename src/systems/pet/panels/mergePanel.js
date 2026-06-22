@@ -27,9 +27,9 @@ function build(userId, user, filterRarity) {
   const active = filterRarity && MERGE_TIERS.includes(filterRarity) ? filterRarity : null;
 
   const summaryLines = MERGE_TIERS.map(r => {
-    const can = counts[r] >= MERGE_COUNT;
-    const icon = can ? '✅' : '❌';
-    return `${RARITY_BADGE[r]} **${r.toUpperCase()}**  ×${counts[r]}  ${icon} ${can ? `(รวมได้ ${Math.floor(counts[r] / MERGE_COUNT)} ครั้ง)` : `(ต้องการ ${MERGE_COUNT})`}`;
+    const can   = counts[r] >= MERGE_COUNT;
+    const times = Math.floor(counts[r] / MERGE_COUNT);
+    return `${RARITY_BADGE[r]} **${r.toUpperCase()}**  ×${counts[r]}  ${can ? `✅ รวมได้ ${times} ครั้ง` : `❌ ต้องการ ${MERGE_COUNT}`}`;
   });
 
   const embed = new EmbedBuilder()
@@ -43,24 +43,36 @@ function build(userId, user, filterRarity) {
 
   const components = [];
 
-  // Row 1: rarity filter tabs
-  const filterBtns = MERGE_TIERS.map(r =>
+  // Row 1: quick merge buttons — กดแล้วเลือก 10 ตัวอัตโนมัติ ไปหน้ายืนยันเลย
+  const quickBtns = MERGE_TIERS.map(r =>
     new ButtonBuilder()
-      .setCustomId(`pet_nav_${uid}_merge_${r}`)
-      .setLabel(`${RARITY_BADGE[r]} ${counts[r]}`)
-      .setStyle(active === r ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setCustomId(`pet_act_${uid}_qmerge_${r}`)
+      .setLabel(`${RARITY_BADGE[r]} รวม ${r.charAt(0).toUpperCase() + r.slice(1)}`)
+      .setStyle(ButtonStyle.Success)
       .setDisabled(counts[r] < MERGE_COUNT)
   );
-  filterBtns.push(
+  quickBtns.push(
     new ButtonBuilder().setCustomId(`pet_nav_${uid}_main`).setLabel('◀ กลับ').setStyle(ButtonStyle.Secondary)
   );
-  components.push(new ActionRowBuilder().addComponents(filterBtns));
+  components.push(new ActionRowBuilder().addComponents(quickBtns));
 
-  // Row 2: pet select (if filter active)
+  // Row 2: expand tab (if user wants to pick manually)
+  if (!active) {
+    const tabBtns = MERGE_TIERS.map(r =>
+      new ButtonBuilder()
+        .setCustomId(`pet_nav_${uid}_merge_${r}`)
+        .setLabel(`${RARITY_BADGE[r]} เลือกเอง`)
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(counts[r] < MERGE_COUNT)
+    );
+    components.push(new ActionRowBuilder().addComponents(tabBtns));
+  }
+
+  // Row 2-3: manual select (if filter active)
   if (active && counts[active] >= MERGE_COUNT) {
     embed.addFields({
       name: `${TIER_HEADER[active]}`,
-      value: `เลือก ${MERGE_COUNT} ตัวเพื่อรวม:`,
+      value: `เลือก ${MERGE_COUNT} ตัวเอง หรือกดปุ่มด้านบนเพื่อรวมอัตโนมัติ`,
     });
 
     const petsOfRarity = pets
@@ -69,7 +81,6 @@ function build(userId, user, filterRarity) {
 
     const options = petsOfRarity.map(p => {
       const sp  = catalog[p.speciesId];
-      const enh = enhanceLevelLabel(p.enhanceLevel);
       return {
         label:       `${sp?.name || p.speciesId}${p.enhanceLevel > 0 ? ` +${p.enhanceLevel}` : ''}  Lv.${p.level}`.slice(0, 100),
         description: `${RARITY_LABEL[active]}`,
@@ -88,13 +99,17 @@ function build(userId, user, filterRarity) {
         .setMaxValues(maxV)
         .addOptions(options)
     ));
+
+    components.push(new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`pet_nav_${uid}_merge`).setLabel('◀ กลับ').setStyle(ButtonStyle.Secondary)
+    ));
   }
 
   return { embeds: [embed], components };
 }
 
 function buildConfirm(userId, selectedPets, fromRarity) {
-  const uid     = userId;
+  const uid      = userId;
   const toRarity = NEXT_TIER[fromRarity];
 
   const lines = selectedPets.map((p, i) => {
@@ -123,7 +138,8 @@ function buildConfirm(userId, selectedPets, fromRarity) {
     components: [
       new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`pet_act_${uid}_domerge`).setLabel('🔄 รวมเลย!').setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId(`pet_nav_${uid}_merge_${fromRarity}`).setLabel('◀ กลับ').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`pet_nav_${uid}_merge_${fromRarity}`).setLabel('◀ เลือกใหม่').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`pet_nav_${uid}_merge`).setLabel('◀ กลับ').setStyle(ButtonStyle.Secondary),
       ),
     ],
   };

@@ -237,6 +237,28 @@ async function handleAction(interaction, userId, guildId, action, extra) {
     return interaction.editReply(enhanceMatPanel.build(userId, user, session));
   }
 
+  // Merge: quick merge — auto-select first 10 → confirm
+  if (action === 'qmerge') {
+    await interaction.deferUpdate();
+    const rarity = extra;
+    if (!mergePanel.MERGE_TIERS.includes(rarity)) {
+      return interaction.editReply(mergePanel.build(userId, petManager.getUser(guildId, userId)));
+    }
+
+    const user = petManager.getUser(guildId, userId);
+    const petsOfRarity = user.pets
+      .filter(p => (catalog[p.speciesId]?.rarity || 'common') === rarity)
+      .slice(0, mergePanel.MERGE_COUNT);
+
+    if (petsOfRarity.length < mergePanel.MERGE_COUNT) {
+      return interaction.editReply(mergePanel.build(userId, user));
+    }
+
+    const instanceIds = petsOfRarity.map(p => p.instanceId);
+    mergeSessions.set(`${guildId}_${userId}`, { rarity, instanceIds });
+    return interaction.editReply(mergePanel.buildConfirm(userId, petsOfRarity, rarity));
+  }
+
   // Merge: execute
   if (action === 'domerge') {
     await interaction.deferUpdate();
